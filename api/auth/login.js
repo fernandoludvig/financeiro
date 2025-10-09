@@ -1,5 +1,4 @@
-// Vercel API Route para login
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -13,20 +12,15 @@ async function connectToDatabase() {
   if (cachedClient && cachedDb) {
     return { client: cachedClient, db: cachedDb };
   }
-
   const client = new MongoClient(MONGODB_URI);
   await client.connect();
-  
   const db = client.db('financeiro');
-  
   cachedClient = client;
   cachedDb = db;
-
   return { client, db };
 }
 
 export default async function handler(req, res) {
-  // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -43,47 +37,33 @@ export default async function handler(req, res) {
 
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
     }
 
     const { client, db } = await connectToDatabase();
-
-    // Buscar usuário
     const user = await db.collection('users').findOne({ email: email.toLowerCase() });
-
     if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Verificar senha
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Gerar token JWT
     const token = jwt.sign(
-      { 
-        id: user._id, 
-        email: user.email,
-        name: user.name 
-      },
+      { id: user._id, email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Retornar dados do usuário (sem senha)
     const { password: _, ...userWithoutPassword } = user;
-
     res.status(200).json({
       message: 'Login realizado com sucesso',
       token,
       user: userWithoutPassword
     });
-
   } catch (error) {
     console.error('Erro no login:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });

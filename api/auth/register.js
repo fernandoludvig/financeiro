@@ -1,5 +1,4 @@
-// Vercel API Route para registro
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -13,20 +12,15 @@ async function connectToDatabase() {
   if (cachedClient && cachedDb) {
     return { client: cachedClient, db: cachedDb };
   }
-
   const client = new MongoClient(MONGODB_URI);
   await client.connect();
-  
   const db = client.db('financeiro');
-  
   cachedClient = client;
   cachedDb = db;
-
   return { client, db };
 }
 
 export default async function handler(req, res) {
-  // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -43,34 +37,24 @@ export default async function handler(req, res) {
 
   try {
     const { name, email, password } = req.body;
-
-    // Validações
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
     }
-
     if (password.length < 6) {
       return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Email inválido' });
     }
 
     const { client, db } = await connectToDatabase();
-
-    // Verificar se usuário já existe
     const existingUser = await db.collection('users').findOne({ email: email.toLowerCase() });
-
     if (existingUser) {
       return res.status(400).json({ error: 'Usuário já existe com este email' });
     }
 
-    // Hash da senha
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Criar usuário
     const user = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
@@ -82,27 +66,18 @@ export default async function handler(req, res) {
     };
 
     const result = await db.collection('users').insertOne(user);
-
-    // Gerar token JWT
     const token = jwt.sign(
-      { 
-        id: result.insertedId, 
-        email: user.email,
-        name: user.name 
-      },
+      { id: result.insertedId, email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Retornar dados do usuário (sem senha)
     const { password: _, ...userWithoutPassword } = user;
-
     res.status(201).json({
       message: 'Usuário criado com sucesso',
       token,
       user: { ...userWithoutPassword, _id: result.insertedId }
     });
-
   } catch (error) {
     console.error('Erro no registro:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });

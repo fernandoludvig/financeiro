@@ -1,4 +1,3 @@
-// Vercel API Route para categorias
 const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -12,26 +11,18 @@ async function connectToDatabase() {
   if (cachedClient && cachedDb) {
     return { client: cachedClient, db: cachedDb };
   }
-
   const client = new MongoClient(MONGODB_URI);
   await client.connect();
-  
   const db = client.db('financeiro');
-  
   cachedClient = client;
   cachedDb = db;
-
   return { client, db };
 }
 
 function authenticateToken(req) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return null;
-  }
-
+  if (!token) return null;
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (error) {
@@ -40,7 +31,6 @@ function authenticateToken(req) {
 }
 
 export default async function handler(req, res) {
-  // Configurar CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -60,34 +50,25 @@ export default async function handler(req, res) {
     const { client, db } = await connectToDatabase();
 
     if (req.method === 'GET') {
-      // Listar categorias do usuário
-      const categories = await db.collection('categories').find({ 
-        user_id: new ObjectId(user.id) 
-      }).toArray();
-
+      const categories = await db.collection('categories').find({ user_id: new ObjectId(user.id) }).toArray();
       const formattedCategories = categories.map(category => ({
         ...category,
         id: category._id.toString(),
         user_id: category.user_id.toString(),
         _id: category._id.toString()
       }));
-
       res.status(200).json(formattedCategories);
 
     } else if (req.method === 'POST') {
-      // Criar nova categoria
       const { name, color, icon } = req.body;
-
       if (!name || name.trim().length < 2) {
         return res.status(400).json({ error: 'Nome da categoria é obrigatório (mínimo 2 caracteres)' });
       }
 
-      // Verificar se categoria já existe
       const existingCategory = await db.collection('categories').findOne({
         user_id: new ObjectId(user.id),
         name: name.trim()
       });
-
       if (existingCategory) {
         return res.status(400).json({ error: 'Categoria já existe' });
       }
@@ -102,22 +83,18 @@ export default async function handler(req, res) {
       };
 
       const result = await db.collection('categories').insertOne(category);
-
       const formattedCategory = {
         ...category,
         id: result.insertedId.toString(),
         _id: result.insertedId.toString(),
         user_id: category.user_id.toString()
       };
-
       res.status(201).json(formattedCategory);
-
     } else {
       res.status(405).json({ error: 'Método não permitido' });
     }
-
   } catch (error) {
-    console.error('❌ Erro nas categorias:', error);
+    console.error('Erro nas categorias:', error);
     res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
   }
 }
