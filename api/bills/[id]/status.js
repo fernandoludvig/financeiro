@@ -70,26 +70,33 @@ export default async function handler(req, res) {
 
     const { client, db } = await connectToDatabase();
 
-    // Atualizar status da conta
+    // Atualizar status da conta - EXATAMENTE igual ao localhost
+    console.log('🔄 Atualizando status da conta:', id, 'para:', status);
+    
+    const updateData = { status };
+    
+    // Adicionar paid_at se status for 'paid'
+    if (status === 'paid') {
+      updateData.paid_at = new Date();
+    } else if (status === 'pending') {
+      updateData.paid_at = null;
+    }
+    
+    updateData.updatedAt = new Date();
+
     const result = await db.collection('bills').updateOne(
       { 
         _id: new ObjectId(id), 
         user_id: new ObjectId(user.id) 
       },
-      { 
-        $set: { 
-          status: status,
-          updatedAt: new Date(),
-          ...(status === 'paid' && { paid_at: new Date() })
-        } 
-      }
+      { $set: updateData }
     );
 
     if (result.matchedCount === 0) {
       return res.status(404).json({ error: 'Conta não encontrada' });
     }
 
-    // Buscar conta atualizada
+    // Buscar conta atualizada - igual ao localhost
     const updatedBill = await db.collection('bills').findOne({ 
       _id: new ObjectId(id),
       user_id: new ObjectId(user.id)
@@ -99,7 +106,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Conta não encontrada' });
     }
 
-    // Formatar resposta
+    // Formatar resposta - EXATAMENTE igual ao localhost
     const formattedBill = {
       ...updatedBill,
       id: updatedBill._id.toString(),
@@ -107,6 +114,7 @@ export default async function handler(req, res) {
       _id: updatedBill._id.toString()
     };
 
+    console.log('✅ Status atualizado com sucesso:', formattedBill.id, 'status:', formattedBill.status);
     res.status(200).json(formattedBill);
 
   } catch (error) {

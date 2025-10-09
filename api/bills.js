@@ -89,9 +89,13 @@ export default async function handler(req, res) {
       const { name, category, amount, due_date } = req.body;
       console.log('📝 Dados recebidos para criar conta:', { name, category, amount, due_date });
       
-      // Corrigir problema de timezone - igual ao localhost
+      // Corrigir problema de timezone - EXATAMENTE igual ao localhost
       const dateParts = due_date.split('-');
       const localDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      
+      console.log('📅 Data original:', due_date);
+      console.log('📅 Data processada:', localDate);
+      console.log('📅 Data local formatada:', localDate.toISOString().split('T')[0]);
       
       const bill = {
         user_id: new ObjectId(user.id),
@@ -100,6 +104,12 @@ export default async function handler(req, res) {
         amount: parseFloat(amount),
         due_date: localDate,
         status: 'pending',
+        paid_at: null,
+        boleto_file: null,
+        boleto_filename: null,
+        comprovante_file: null,
+        comprovante_filename: null,
+        pix_info: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
