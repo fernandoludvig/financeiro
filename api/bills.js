@@ -1,4 +1,4 @@
-// Vercel API Route para contas
+// Vercel API Route para contas - Compatível com localhost
 const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -61,9 +61,16 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Token de acesso necessário' });
       }
 
-      const bills = await db.collection('bills').find({ user_id: user.id }).toArray();
+      console.log('📋 Buscando contas para user_id:', user.id);
+
+      // Usar ObjectId para buscar corretamente
+      const bills = await db.collection('bills').find({ 
+        user_id: new ObjectId(user.id) 
+      }).sort({ due_date: 1 }).toArray();
       
-      // Converter ObjectId para string
+      console.log('📋 Contas encontradas:', bills.length);
+
+      // Converter ObjectId para string - igual ao localhost
       const formattedBills = bills.map(bill => ({
         ...bill,
         id: bill._id.toString(),
@@ -73,31 +80,49 @@ export default async function handler(req, res) {
 
       res.status(200).json(formattedBills);
     } else if (req.method === 'POST') {
-      // Criar nova conta
+      // Criar nova conta - igual ao localhost
       const user = authenticateToken(req);
       if (!user) {
         return res.status(401).json({ error: 'Token de acesso necessário' });
       }
 
-      const bill = req.body;
-      bill.user_id = user.id;
-      bill.createdAt = new Date();
-      bill.updatedAt = new Date();
+      const { name, category, amount, due_date } = req.body;
+      console.log('📝 Dados recebidos para criar conta:', { name, category, amount, due_date });
+      
+      // Corrigir problema de timezone - igual ao localhost
+      const dateParts = due_date.split('-');
+      const localDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      
+      const bill = {
+        user_id: new ObjectId(user.id),
+        name,
+        category: category || null,
+        amount: parseFloat(amount),
+        due_date: localDate,
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log('📝 Criando conta com user_id:', user.id, 'tipo:', typeof user.id);
       
       const result = await db.collection('bills').insertOne(bill);
       
-      const newBill = {
+      // Formatar resposta - igual ao localhost
+      const formattedBill = {
         ...bill,
         id: result.insertedId.toString(),
-        _id: result.insertedId.toString()
+        _id: result.insertedId.toString(),
+        user_id: bill.user_id.toString()
       };
 
-      res.status(201).json(newBill);
+      console.log('✅ Conta criada com sucesso:', formattedBill.id);
+      res.status(201).json(formattedBill);
     } else {
       res.status(405).json({ error: 'Método não permitido' });
     }
   } catch (error) {
-    console.error('Erro na API:', error);
+    console.error('❌ Erro na API:', error);
     res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
   }
 }
