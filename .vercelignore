@@ -1,4 +1,4 @@
-# Backend (não necessário para o frontend no Vercel)
+# Backend antigo (agora usamos Vercel Functions)
 backend/
 *.env
 *.log
