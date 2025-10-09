@@ -1,0 +1,15 @@
+{
+  "style": "default",
+  "rsc": false,
+  "tsx": false,
+  "tailwind": {
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "aliases": {
+    "@/components": "./src/components",
+    "@/utils": "./src/lib"
+  }
+}
+
+

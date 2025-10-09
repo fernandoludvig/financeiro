@@ -1,0 +1,35 @@
+{
+  "name": "financial-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.1.0",
+    "express-slow-down": "^3.0.0",
+    "express-validator": "^7.2.1",
+    "googleapis": "^144.0.0",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.1",
+    "multer": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14",
+    "pdfkit": "^0.15.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "xss-clean": "^0.1.4"
+  }
+}
