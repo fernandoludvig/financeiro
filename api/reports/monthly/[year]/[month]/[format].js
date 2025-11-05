@@ -499,14 +499,11 @@ export default async function handler(req, res) {
     // Configurar headers exatamente como no backend local
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    
-    // No Vercel, precisamos usar uma abordagem diferente do res.download()
-    // Vamos usar res.end() com o buffer diretamente, similar ao que res.download() faz internamente
-    res.status(200);
     res.setHeader('Content-Length', finalBuffer.length);
     
-    // Enviar o buffer binário diretamente - método mais compatível com Vercel
-    res.end(finalBuffer, 'binary');
+    // No Vercel Serverless Functions, enviar o buffer diretamente sem encoding
+    // Isso replica o comportamento do res.download() do Express
+    res.status(200).end(finalBuffer);
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
