@@ -388,22 +388,22 @@ export default async function handler(req, res) {
       if (req.method === 'PATCH') {
         return await handleStatus(req, res, id, user);
       }
-      return res.status(405).json({ error: 'Método não permitido' });
+      return res.status(405).json({ error: `Método não permitido. Esperado: PATCH, Recebido: ${req.method}` });
     } else if (action === 'comprovante' || action === 'boleto') {
       if (req.method === 'POST') {
         return await handleFileUpload(req, res, id, user, action);
       } else if (req.method === 'GET') {
         return await handleDownload(req, res, id, user, action);
       }
-      return res.status(405).json({ error: 'Método não permitido' });
+      return res.status(405).json({ error: `Método não permitido. Esperado: POST ou GET, Recebido: ${req.method}` });
     } else if (action === 'pix') {
       if (req.method === 'PATCH') {
         return await handleUpdate(req, res, id, user);
       }
-      return res.status(405).json({ error: 'Método não permitido' });
+      return res.status(405).json({ error: `Método não permitido. Esperado: PATCH, Recebido: ${req.method}` });
     }
 
-    return res.status(404).json({ error: 'Rota não encontrada' });
+    return res.status(404).json({ error: `Rota não encontrada. URL: ${url}, Action: ${action}, Method: ${req.method}` });
   } catch (error) {
     console.error('Erro no handler:', error);
     res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
