@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Form, FormField, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Download, CheckCircle2, XCircle, FileDown, Bell, Settings, Paperclip, FileText, Receipt, Smartphone, Edit3, Trash2, Copy, Calendar, CreditCard, Banknote, AlertCircle, Clock } from 'lucide-react'
+import { LogOut, Download, CheckCircle2, XCircle, FileDown, Bell, Settings, Paperclip, FileText, Receipt, Smartphone, Edit3, Trash2, Copy, Calendar, CreditCard, Banknote, AlertCircle, Clock, FileType, FileCheck } from 'lucide-react'
 import { 
   initializeSecurity, 
   sanitizeInput, 
@@ -20,7 +20,7 @@ import {
   secureSession 
 } from './security.js'
 
-const API_URL = (process.env.REACT_APP_API_URL || '').trim() || `${window.location.origin}/api`
+const API_URL = (process.env.REACT_APP_API_URL || '').trim() || `http://localhost:3001/api`
 
 export default function App() {
   const [token, setToken] = useState(null)
@@ -60,7 +60,7 @@ export default function App() {
   const [currentPagePending, setCurrentPagePending] = useState(1)
   const [currentPagePaid, setCurrentPagePaid] = useState(1)
   const ITEMS_PER_PAGE_PENDING = 5
-  const ITEMS_PER_PAGE_PAID = 20
+  const ITEMS_PER_PAGE_PAID = 15
 
   useEffect(() => {
     // Inicializar proteções de segurança
@@ -292,6 +292,9 @@ export default function App() {
     e.preventDefault()
     setError('')
     
+    console.log('🔐 handleAuth chamado, authMode:', authMode)
+    console.log('📝 Form data:', authForm)
+    
     try {
       // Sanitizar dados do formulário
       const sanitizedForm = sanitizeFormData(authForm)
@@ -318,11 +321,15 @@ export default function App() {
       }
       
       const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register'
+      console.log('🌐 Fazendo requisição para:', `${API_URL}${endpoint}`)
+      
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sanitizedForm)
       })
+      
+      console.log('📡 Resposta recebida:', res.status, res.statusText)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Falha na autenticação')
       
@@ -346,6 +353,7 @@ export default function App() {
   }
 
   async function loadBills() {
+    if (!token) return
     setError('')
     try {
       const res = await fetch(`${API_URL}/bills`, {
@@ -605,6 +613,7 @@ export default function App() {
   }
 
   async function loadCategories() {
+    if (!token) return
     try {
       const res = await fetch(`${API_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -822,6 +831,12 @@ export default function App() {
         body: formData
       })
       
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text()
+        throw new Error(`Erro no servidor: ${res.status} ${res.statusText}. ${text.substring(0, 100)}`)
+      }
+      
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao enviar arquivo')
       
@@ -927,7 +942,7 @@ export default function App() {
                 </TabsList>
                 
                 <TabsContent value="login" className="space-y-4 mt-6">
-                  <Form onSubmit={handleAuth}>
+                  <form onSubmit={handleAuth}>
                     <FormField>
                       <FormLabel htmlFor="login-email">Email</FormLabel>
                       <FormControl>
@@ -961,11 +976,11 @@ export default function App() {
                     <Button type="submit" className="w-full h-11 mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200">
                       Entrar
                     </Button>
-                  </Form>
+                  </form>
                 </TabsContent>
                 
                 <TabsContent value="register" className="space-y-4 mt-6">
-                  <Form onSubmit={handleAuth}>
+                  <form onSubmit={handleAuth}>
                     <FormField>
                       <FormLabel htmlFor="register-name">Nome completo</FormLabel>
                       <FormControl>
@@ -1016,7 +1031,7 @@ export default function App() {
                     <Button type="submit" className="w-full h-11 mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200">
                       Criar conta
                     </Button>
-                  </Form>
+                  </form>
                 </TabsContent>
               </Tabs>
               
@@ -1069,86 +1084,170 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <header className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Financeiro</h1>
-          <p className="text-sm text-muted-foreground">Bem-vindo, {user?.name}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={testNotifications} className="relative z-10"><Bell className="h-4 w-4 mr-2"/> Testar Notificações</Button>
-          <Button variant="outline" onClick={() => setShowSettings(true)}><Settings className="h-4 w-4 mr-2"/> Configurações</Button>
-          <Button onClick={() => setShowFilterModal(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-            <FileDown className="h-4 w-4 mr-2"/> Relatórios
-          </Button>
-          <Button variant="destructive" onClick={handleLogout}><LogOut className="h-4 w-4 mr-2"/> Logout</Button>
+    <div className="min-h-screen">
+      {/* Header com gradiente moderno */}
+      <header className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700 text-white shadow-modern-lg">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Banknote className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Financeiro</h1>
+                  <p className="text-sm text-purple-100">Bem-vindo, {user?.name}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="secondary" 
+                onClick={testNotifications} 
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 shadow-lg"
+              >
+                <Bell className="h-4 w-4 mr-2 text-yellow-400"/>
+                Notificações
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowSettings(true)}
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 shadow-lg"
+              >
+                <Settings className="h-4 w-4 mr-2 text-blue-300"/>
+                Configurações
+              </Button>
+              <Button 
+                onClick={() => setShowFilterModal(true)} 
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg border-0"
+              >
+                <FileDown className="h-4 w-4 mr-2"/>
+                Relatórios
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleLogout}
+                className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white shadow-lg border-0"
+              >
+                <LogOut className="h-4 w-4 mr-2"/>
+                Logout
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 pb-10 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-orange-600" />
-                Vence Hoje
-              </CardTitle>
-              <Badge variant="destructive" className="text-xs">{billsDueToday.length}</Badge>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-red-700">R$ {totalDueToday.toFixed(2)}</p>
-              <p className="text-xs text-red-600 mt-1">{billsDueToday.length} conta(s)</p>
-            </CardContent>
-          </Card>
-          
-          {billsOverdue.length > 0 && (
-            <Card className="border-red-400 bg-gradient-to-br from-red-100 to-red-50">
-              <CardHeader className="flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-red-600" />
-                  Vencidas
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Cards de Resumo com Design Moderno */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Vence Hoje */}
+          <Card className="gradient-card-red shadow-modern-lg border-0 rounded-2xl overflow-hidden">
+            <div className="relative">
+              <CardHeader className="flex-row items-center justify-between pb-2 pt-6">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-800">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  Vence Hoje
                 </CardTitle>
-                <Badge className="text-xs bg-red-700">{billsOverdue.length}</Badge>
+                <div className="w-6 h-6 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{billsDueToday.length}</span>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-red-800">R$ {totalOverdue.toFixed(2)}</p>
-                <p className="text-xs text-red-700 mt-1">{billsOverdue.length} conta(s) atrasada(s)</p>
+                <p className="text-2xl font-bold text-gray-900">R$ {totalDueToday.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1">{billsDueToday.length} conta(s)</p>
               </CardContent>
+            </div>
+          </Card>
+          
+          {/* Vencidas (se houver) */}
+          {billsOverdue.length > 0 && (
+            <Card className="gradient-card-red shadow-modern-lg border-0 rounded-2xl overflow-hidden">
+              <div className="relative">
+                <CardHeader className="flex-row items-center justify-between pb-2 pt-6">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-900">
+                    <Clock className="w-4 h-4 text-red-700" />
+                    Vencidas
+                  </CardTitle>
+                  <div className="w-6 h-6 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">{billsOverdue.length}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-gray-900">R$ {totalOverdue.toFixed(2)}</p>
+                  <p className="text-xs text-gray-600 mt-1">{billsOverdue.length} conta(s) atrasada(s)</p>
+                </CardContent>
+              </div>
             </Card>
           )}
           
-          <Card>
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <XCircle className="h-5 w-5 text-warning"/>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">R$ {stats.pending.toFixed(2)}</p>
-            </CardContent>
+          {/* Pendentes */}
+          <Card className="gradient-card-orange shadow-modern-lg border-0 rounded-2xl overflow-hidden">
+            <div className="relative">
+              <CardHeader className="flex-row items-center justify-between pb-2 pt-6">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-800">
+                  <XCircle className="w-4 h-4 text-orange-600" />
+                  Pendentes
+                </CardTitle>
+                <div className="w-6 h-6 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{filteredPending.length}</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-gray-900">R$ {stats.pending.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1">{filteredPending.length} contas pendentes</p>
+              </CardContent>
+            </div>
           </Card>
-          <Card>
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pagas</CardTitle>
-              <CheckCircle2 className="h-5 w-5 text-success"/>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">R$ {stats.paid.toFixed(2)}</p>
-            </CardContent>
+          
+          {/* Pagas */}
+          <Card className="gradient-card-blue shadow-modern-lg border-0 rounded-2xl overflow-hidden">
+            <div className="relative">
+              <CardHeader className="flex-row items-center justify-between pb-2 pt-6">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-800">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                  Pagas
+                </CardTitle>
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{filteredPaid.length}</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-gray-900">R$ {stats.paid.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1">{filteredPaid.length} contas pagas</p>
+              </CardContent>
+            </div>
           </Card>
-          <Card>
-            <CardHeader className="flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
-              <Download className="h-5 w-5"/>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">R$ {stats.total.toFixed(2)}</p>
-            </CardContent>
+          
+          {/* Total */}
+          <Card className="gradient-card-green shadow-modern-lg border-0 rounded-2xl overflow-hidden">
+            <div className="relative">
+              <CardHeader className="flex-row items-center justify-between pb-2 pt-6">
+                <CardTitle className="text-sm font-medium flex items-center gap-2 text-green-800">
+                  <Banknote className="w-4 h-4 text-green-600" />
+                  Total
+                </CardTitle>
+                <div className="w-6 h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">👤</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-gray-900">R$ {stats.total.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1">Total geral</p>
+              </CardContent>
+            </div>
           </Card>
         </div>
 
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Contas</h2>
-          <Button onClick={() => setShowForm(s=>!s)}>Adicionar Nova Conta</Button>
+          <h2 className="text-lg font-semibold text-gray-800">Contas</h2>
+          <Button 
+            onClick={() => setShowForm(s=>!s)} 
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg border-0 rounded-xl px-6 py-2"
+          >
+            <span className="text-lg mr-2">+</span>
+            Adicionar Nova Conta
+          </Button>
         </div>
 
         {showForm && (
@@ -1276,7 +1375,7 @@ export default function App() {
                 return (
                   <Card 
                     key={b.id} 
-                    className="border-2 border-red-400 shadow-lg bg-gradient-to-br from-red-50 to-orange-50"
+                    className="border-0 shadow-modern-lg rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 overflow-hidden"
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
@@ -1284,44 +1383,90 @@ export default function App() {
                           {b.name}
                         </CardTitle>
                         <Badge 
-                          variant="destructive" 
-                          className="text-xs"
-                          style={{ 
-                            backgroundColor: categoryColor,
-                            color: textColor,
-                            borderColor: categoryColor
-                          }}
+                          className="text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 shadow-md"
                         >
                           R$ {Number(b.amount).toFixed(2)}
                         </Badge>
                       </div>
-                      <CardDescription style={{ color: textColor }}>
-                        {b.category || 'Sem categoria'} • Vence HOJE
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge 
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{ 
+                            backgroundColor: categoryColor,
+                            color: 'white',
+                            border: 'none'
+                          }}
+                        >
+                          {b.category || 'Sem categoria'}
+                        </Badge>
+                        <span className="text-gray-600">• Vence HOJE</span>
                       </CardDescription>
                     </CardHeader>
-                    <CardFooter className="flex-col space-y-2">
-                      <div className="flex flex-wrap gap-2 w-full">
+                    <CardFooter className="pt-0">
+                      {/* Ações principais em linha horizontal */}
+                      <div className="flex gap-2 mb-2">
+                        <Button 
+                          size="default" 
+                          onClick={()=>markAsPaid(b.id)} 
+                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0 h-10"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Pagar
+                        </Button>
+                        <Button 
+                          size="default" 
+                          variant="outline" 
+                          onClick={()=>openEditModal(b)} 
+                          className="flex-1 bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 text-yellow-700 hover:from-yellow-100 hover:to-yellow-200 h-10"
+                        >
+                          <Edit3 className="w-4 h-4 mr-2" />
+                          Editar
+                        </Button>
+                      </div>
+                      
+                      {/* Anexos e ações secundárias - todos alinhados à direita com margem */}
+                      <div className="flex gap-2 justify-end ml-16">
                         {b.boleto_file ? (
-                          <Button size="sm" variant="outline" onClick={() => downloadFile(b.id, 'boleto')} className="text-xs">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Boleto
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => downloadFile(b.id, 'boleto')} 
+                            className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                            title="Baixar Boleto"
+                          >
+                            <FileType className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleFileUpload(b.id, 'boleto')} className="text-xs">
-                            <Paperclip className="h-3 w-3 mr-1" />
-                            Boleto
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleFileUpload(b.id, 'boleto')} 
+                            className="h-8 w-8 p-0"
+                            title="Anexar Boleto"
+                          >
+                            <FileType className="h-4 w-4" />
                           </Button>
                         )}
                         
                         {b.comprovante_file ? (
-                          <Button size="sm" variant="outline" onClick={() => downloadFile(b.id, 'comprovante')} className="text-xs">
-                            <Receipt className="h-3 w-3 mr-1" />
-                            Comprovante
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => downloadFile(b.id, 'comprovante')} 
+                            className="h-8 w-8 p-0 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                            title="Baixar Comprovante"
+                          >
+                            <FileCheck className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleFileUpload(b.id, 'comprovante')} className="text-xs">
-                            <Paperclip className="h-3 w-3 mr-1" />
-                            Comprovante
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleFileUpload(b.id, 'comprovante')} 
+                            className="h-8 w-8 p-0"
+                            title="Anexar Comprovante"
+                          >
+                            <FileCheck className="h-4 w-4" />
                           </Button>
                         )}
                         
@@ -1329,27 +1474,30 @@ export default function App() {
                           size="sm" 
                           variant="outline" 
                           onClick={() => openPixModal(b)} 
-                          className={`text-xs ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : ''}`}
+                          className={`h-8 w-8 p-0 ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                          title="Configurar PIX"
                         >
-                          <Smartphone className="h-3 w-3 mr-1" />
-                          {b.pix_info ? 'PIX ✓' : 'PIX'}
+                          <Smartphone className="h-4 w-4" />
                         </Button>
-                      </div>
-                      
-                      <div className="flex gap-2 w-full">
-                        <Button size="sm" onClick={()=>markAsPaid(b.id)} className="flex-1 bg-green-600 hover:bg-green-700">
-                          Marcar como pago
+                        
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={()=>cloneBill(b)} 
+                          className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                          title="Clonar Conta"
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={()=>openEditModal(b)} className="flex-1">
-                          <Edit3 className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={()=>cloneBill(b)} className="flex-1">
-                          <Copy className="w-4 h-4 mr-1" />
-                          Clonar
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={()=>deleteBill(b.id)}>
-                          Excluir
+                        
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={()=>deleteBill(b.id)}
+                          className="h-8 w-8 p-0 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                          title="Excluir Conta"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </CardFooter>
@@ -1383,7 +1531,7 @@ export default function App() {
                 return (
                   <Card 
                     key={b.id} 
-                    className="border-2 border-red-600 shadow-lg bg-gradient-to-br from-red-100 to-red-50"
+                    className="border-0 shadow-modern-lg rounded-2xl bg-gradient-to-br from-red-100 to-red-50 overflow-hidden"
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
@@ -1401,8 +1549,18 @@ export default function App() {
                           R$ {Number(b.amount).toFixed(2)}
                         </Badge>
                       </div>
-                      <CardDescription style={{ color: textColor }}>
-                        {b.category || 'Sem categoria'} • Venceu há {daysOverdue} dia(s)
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge 
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{ 
+                            backgroundColor: categoryColor,
+                            color: 'white',
+                            border: 'none'
+                          }}
+                        >
+                          {b.category || 'Sem categoria'}
+                        </Badge>
+                        <span className="text-gray-600">• Venceu há {daysOverdue} dia(s)</span>
                       </CardDescription>
                     </CardHeader>
                     <CardFooter className="flex-col space-y-2">
@@ -1443,10 +1601,20 @@ export default function App() {
                       </div>
                       
                       <div className="flex gap-2 w-full">
-                        <Button size="sm" onClick={()=>markAsPaid(b.id)} className="flex-1 bg-green-600 hover:bg-green-700">
-                          Marcar como pago
+                        <Button 
+                          size="sm" 
+                          onClick={()=>markAsPaid(b.id)} 
+                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          Pagar
                         </Button>
-                        <Button size="sm" variant="outline" onClick={()=>openEditModal(b)} className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={()=>openEditModal(b)} 
+                          className="flex-1 bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 text-yellow-700 hover:from-yellow-100 hover:to-yellow-200"
+                        >
                           <Edit3 className="w-4 h-4 mr-1" />
                           Editar
                         </Button>
@@ -1454,7 +1622,13 @@ export default function App() {
                           <Copy className="w-4 h-4 mr-1" />
                           Clonar
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={()=>deleteBill(b.id)}>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={()=>deleteBill(b.id)}
+                          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md border-0"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
                           Excluir
                         </Button>
                       </div>
@@ -1466,10 +1640,13 @@ export default function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">⏰ Pendentes ({filteredPending.length})</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{height: '650px'}}>
+          <div className="flex flex-col" style={{height: '100%'}}>
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-2">
+                <Clock className="w-5 h-5 text-orange-600" />
+                Pendentes ({filteredPending.length})
+              </h3>
               <div className="flex gap-2">
                 <select 
                   value={activeFilters.pending.period}
@@ -1499,7 +1676,7 @@ export default function App() {
                 </select>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {filteredPending.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta pendente</p>}
               {paginatedPending.map(b => {
                 const categoryColor = getCategoryColor(b.category)
@@ -1507,55 +1684,100 @@ export default function App() {
                 const textColor = getCategoryTextColor(b.category)
                 
                 return (
-                  <Card key={b.id} className="border border-gray-200" style={{ backgroundColor: bgColor }}>
-                    <CardHeader className="flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base" style={{ color: textColor }}>{b.name}</CardTitle>
-                        <CardDescription style={{ color: textColor }}>{b.category || 'Sem categoria'}</CardDescription>
+                  <Card key={b.id} className="border-0 shadow-modern rounded-2xl bg-white hover:shadow-modern-lg transition-all duration-300 hover:-translate-y-1">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-900 mb-2">{b.name}</CardTitle>
+                          <div className="flex items-center gap-3 mb-3">
+                            <Badge 
+                              className="text-xs px-3 py-1 rounded-full font-medium"
+                              style={{ 
+                                backgroundColor: categoryColor,
+                                color: 'white',
+                                border: 'none'
+                              }}
+                            >
+                              {b.category || 'Sem categoria'}
+                            </Badge>
+                            <span className="text-sm text-gray-500 flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              Vence em {formatDate(b.due_date)}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge 
+                          className="text-sm bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0 shadow-md px-3 py-1 font-semibold"
+                        >
+                          R$ {Number(b.amount).toFixed(2)}
+                        </Badge>
                       </div>
-                      <Badge 
-                        variant="warning" 
-                        className="border-2"
-                        style={{ 
-                          backgroundColor: categoryColor,
-                          color: textColor,
-                          borderColor: categoryColor
-                        }}
-                      >
-                        R$ {Number(b.amount).toFixed(2)}
-                      </Badge>
                     </CardHeader>
-                  <CardFooter className="flex-col space-y-3">
-                    <div className="text-sm text-muted-foreground w-full">Vence em {formatDate(b.due_date)}</div>
-                    
-                    {/* Anexos */}
-                    <div className="flex flex-wrap gap-2 w-full">
-                      {/* Boleto */}
-                      <div className="flex items-center gap-1">
-                        {b.boleto_file ? (
-                          <Button size="sm" variant="outline" onClick={() => downloadFile(b.id, 'boleto')} className="text-xs">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Boleto
-                          </Button>
-                        ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleFileUpload(b.id, 'boleto')} className="text-xs">
-                            <Paperclip className="h-3 w-3 mr-1" />
-                            Boleto
-                          </Button>
-                        )}
+                    <CardFooter className="pt-0">
+                      {/* Ações principais em linha horizontal */}
+                      <div className="flex gap-2 mb-2">
+                        <Button 
+                          size="default" 
+                          onClick={()=>markAsPaid(b.id)} 
+                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0 h-10"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Pagar
+                        </Button>
+                        <Button 
+                          size="default" 
+                          variant="outline" 
+                          onClick={()=>openEditModal(b)} 
+                          className="flex-1 bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 text-yellow-700 hover:from-yellow-100 hover:to-yellow-200 h-10"
+                        >
+                          <Edit3 className="w-4 h-4 mr-2" />
+                          Editar
+                        </Button>
                       </div>
                       
-                      {/* Comprovante */}
-                      <div className="flex items-center gap-1">
-                        {b.comprovante_file ? (
-                          <Button size="sm" variant="outline" onClick={() => downloadFile(b.id, 'comprovante')} className="text-xs">
-                            <Receipt className="h-3 w-3 mr-1" />
-                            Comprovante
+                      {/* Anexos e ações secundárias - todos alinhados à direita com margem */}
+                      <div className="flex gap-2 justify-end ml-16">
+                        {b.boleto_file ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => downloadFile(b.id, 'boleto')} 
+                            className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                            title="Baixar Boleto"
+                          >
+                            <FileType className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => handleFileUpload(b.id, 'comprovante')} className="text-xs">
-                            <Paperclip className="h-3 w-3 mr-1" />
-                            Comprovante
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleFileUpload(b.id, 'boleto')} 
+                            className="h-8 w-8 p-0"
+                            title="Anexar Boleto"
+                          >
+                            <FileType className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {b.comprovante_file ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => downloadFile(b.id, 'comprovante')} 
+                            className="h-8 w-8 p-0 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                            title="Baixar Comprovante"
+                          >
+                            <FileCheck className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleFileUpload(b.id, 'comprovante')} 
+                            className="h-8 w-8 p-0"
+                            title="Anexar Comprovante"
+                          >
+                            <FileCheck className="h-4 w-4" />
                           </Button>
                         )}
                         
@@ -1563,22 +1785,33 @@ export default function App() {
                           size="sm" 
                           variant="outline" 
                           onClick={() => openPixModal(b)} 
-                          className={`text-xs ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : ''}`}
+                          className={`h-8 w-8 p-0 ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                          title="Configurar PIX"
                         >
-                          <Smartphone className="h-3 w-3 mr-1" />
-                          {b.pix_info ? 'PIX ✓' : 'PIX'}
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={()=>cloneBill(b)} 
+                          className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                          title="Clonar Conta"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={()=>deleteBill(b.id)}
+                          className="h-8 w-8 p-0 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                          title="Excluir Conta"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                    
-                    {/* Ações */}
-                    <div className="flex gap-2 w-full">
-                      <Button size="sm" onClick={()=>markAsPaid(b.id)} className="flex-1">Marcar como pago</Button>
-                      <Button size="sm" variant="outline" onClick={()=>openEditModal(b)} className="flex-1">✏️ Editar</Button>
-                      <Button size="sm" variant="outline" onClick={()=>cloneBill(b)} className="flex-1">📋 Clonar</Button>
-                      <Button size="sm" variant="destructive" onClick={()=>deleteBill(b.id)}>Excluir</Button>
-                    </div>
-                  </CardFooter>
+                    </CardFooter>
                 </Card>
                 )
               })}
@@ -1609,9 +1842,12 @@ export default function App() {
               </div>
             )}
           </div>
-          <div>
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h3 className="font-semibold">✅ Pagas ({filteredPaid.length})</h3>
+          <div className="flex flex-col" style={{height: '100%'}}>
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2 flex-shrink-0">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                Pagas ({filteredPaid.length})
+              </h3>
               <div className="flex items-center gap-2 flex-wrap">
                 <select 
                   value={activeFilters.paid.period}
@@ -1645,24 +1881,26 @@ export default function App() {
               </div>
             </div>
             
-            {filteredPaid.length === 0 ? (
-              <div className="text-center py-8 text-green-600">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma conta paga ainda</p>
-              </div>
-            ) : (
-              <Card className="border-green-200 bg-green-50/50">
-                <CardContent className="p-0">
-                  <div className="overflow-hidden">
-                    <table className="w-full table-fixed">
-                      <thead className="bg-green-100 border-b border-green-200">
+            <div className="flex-1 flex flex-col" style={{minHeight: 0}}>
+              {filteredPaid.length === 0 ? (
+                <div className="text-center py-8 text-green-600">
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Nenhuma conta paga ainda</p>
+                </div>
+              ) : (
+                <Card className="border-0 shadow-modern-lg rounded-2xl bg-white overflow-hidden flex-1 flex flex-col">
+                  <CardContent className="p-0 flex-1 flex flex-col">
+                    <div className="overflow-hidden flex-1">
+                      <div className="h-full overflow-y-auto">
+                      <table className="w-full">
+                      <thead className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
                         <tr>
-                          <th className="text-left p-1 text-xs font-medium text-green-800 w-[19%]">Conta</th>
-                          <th className="text-left p-1 text-xs font-medium text-green-800 w-[18%]">Categoria</th>
-                          <th className="text-left p-1 text-xs font-medium text-green-800 w-[12%]">Valor</th>
-                          <th className="text-left p-1 text-xs font-medium text-green-800 w-[11%]">Vencimento</th>
-                          <th className="text-center p-1 text-xs font-medium text-green-800 w-[14%]">Anexos</th>
-                          <th className="text-left p-1 text-xs font-medium text-green-800 w-[26%]">Ações</th>
+                          <th className="text-left p-4 text-sm font-semibold text-green-800">Conta</th>
+                          <th className="text-left p-4 text-sm font-semibold text-green-800">Categoria</th>
+                          <th className="text-left p-4 text-sm font-semibold text-green-800">Valor</th>
+                          <th className="text-left p-4 text-sm font-semibold text-green-800">Vencimento</th>
+                          <th className="text-center p-4 text-sm font-semibold text-green-800">Anexos</th>
+                          <th className="text-center p-4 text-sm font-semibold text-green-800">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1674,44 +1912,46 @@ export default function App() {
                           return (
                             <tr 
                               key={b.id} 
-                              className="border-b border-gray-200 hover:opacity-90 transition-opacity"
-                              style={{ backgroundColor: bgColor }}
+                              className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                             >
-                              <td className="p-1">
-                                <div className="font-medium text-xs truncate" title={b.name} style={{ color: textColor }}>
+                              <td className="p-4">
+                                <div className="font-semibold text-sm text-gray-900 truncate" title={b.name}>
                                   {b.name}
                                 </div>
                               </td>
-                              <td className="p-1">
+                              <td className="p-4">
                                 <Badge 
-                                  variant="outline" 
-                                  className="text-xs border truncate max-w-full block"
+                                  className="text-xs px-3 py-1 rounded-full font-medium"
                                   style={{ 
                                     backgroundColor: categoryColor,
-                                    color: textColor,
-                                    borderColor: categoryColor,
-                                    maxWidth: '100%'
+                                    color: 'white',
+                                    border: 'none'
                                   }}
                                 >
                                   {b.category || 'Sem categoria'}
                                 </Badge>
                               </td>
-                              <td className="p-1 font-medium text-xs" style={{ color: textColor }}>
-                                R$ {Number(b.amount).toFixed(0)}
+                              <td className="p-4">
+                                <span className="font-semibold text-sm text-green-600">
+                                  R$ {Number(b.amount).toFixed(0)}
+                                </span>
                               </td>
-                              <td className="p-1 text-xs" style={{ color: textColor }}>
-                                {formatDate(b.due_date).replace('/2025', '').replace('/2024', '')}
+                              <td className="p-4">
+                                <span className="text-sm text-gray-600">
+                                  {formatDate(b.due_date).replace('/2025', '').replace('/2024', '')}
+                                </span>
                               </td>
-                              <td className="p-1 text-center">
-                                <div className="flex gap-0.5 justify-center">
+                              <td className="p-4 text-center">
+                                <div className="flex gap-2 justify-center">
                                   {b.boleto_file && (
                                     <Button 
                                       size="sm" 
                                       variant="outline" 
                                       onClick={() => downloadFile(b.id, 'boleto')} 
-                                      className="h-4 px-1 text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                      className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                      title="Baixar Boleto"
                                     >
-                                      <FileText className="w-3 h-3" />
+                                      <FileText className="w-4 h-4" />
                                     </Button>
                                   )}
                                   {b.comprovante_file && (
@@ -1719,60 +1959,62 @@ export default function App() {
                                       size="sm" 
                                       variant="outline" 
                                       onClick={() => downloadFile(b.id, 'comprovante')} 
-                                      className="h-4 px-1 text-xs bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                                      className="h-8 w-8 p-0 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                                      title="Baixar Comprovante"
                                     >
-                                      <Receipt className="w-3 h-3" />
+                                      <Receipt className="w-4 h-4" />
                                     </Button>
                                   )}
                                   {!b.boleto_file && !b.comprovante_file && (
-                                    <span className="text-xs text-gray-400">-</span>
+                                    <span className="text-sm text-gray-400">-</span>
                                   )}
                                 </div>
                               </td>
-                            <td className="p-1">
-                              <div className="flex gap-0.5">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => openPixModal(b)}
-                                  className={`h-4 px-1 text-xs ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
-                                  title="PIX"
-                                >
-                                  <Smartphone className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => openEditModal(b)}
-                                  className="h-4 px-1 text-xs bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
-                                  title="Editar"
-                                >
-                                  ✏️
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive" 
-                                  onClick={() => deleteBill(b.id)}
-                                  className="h-4 px-1 text-xs"
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
+                              <td className="p-4 text-center">
+                                <div className="flex gap-2 justify-center">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => openPixModal(b)}
+                                    className={`h-8 w-8 p-0 ${b.pix_info ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}
+                                    title="PIX"
+                                  >
+                                    <Smartphone className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => openEditModal(b)}
+                                    className="h-8 w-8 p-0 bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+                                    title="Editar"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive" 
+                                    onClick={() => deleteBill(b.id)}
+                                    className="h-8 w-8 p-0 bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
                             </tr>
                           )
                         })}
                       </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Paginação para Pagas */}
-            {totalPagesPaid > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-4">
+                      </table>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Paginação para Pagas */}
+              {totalPagesPaid > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-4">
                 <Button 
                   size="sm" 
                   variant="outline"
@@ -1832,6 +2074,7 @@ export default function App() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </main>

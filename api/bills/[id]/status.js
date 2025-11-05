@@ -1,5 +1,5 @@
-const { MongoClient, ObjectId } = require('mongodb');
-const jwt = require('jsonwebtoken');
+import { MongoClient, ObjectId } from 'mongodb';
+import jwt from 'jsonwebtoken';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;

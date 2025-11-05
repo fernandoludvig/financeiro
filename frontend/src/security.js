@@ -121,13 +121,8 @@ export const sanitizeFormData = (formData) => {
 
 // 7. PROTEÇÃO CONTRA CLICKJACKING
 export const preventClickjacking = () => {
-  // Adicionar headers de segurança via meta tags
-  const metaFrameOptions = document.createElement('meta')
-  metaFrameOptions.httpEquiv = 'X-Frame-Options'
-  metaFrameOptions.content = 'DENY'
-  document.head.appendChild(metaFrameOptions)
-  
-  // Detectar se a página está sendo carregada em iframe
+  // X-Frame-Options deve ser configurado via HTTP header no servidor
+  // Apenas detectar se a página está sendo carregada em iframe
   if (window.top !== window.self) {
     console.error('Tentativa de clickjacking detectada!')
     window.top.location = window.self.location
