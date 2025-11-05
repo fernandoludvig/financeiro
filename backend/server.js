@@ -1451,26 +1451,25 @@ async function generatePDFReport(bills, year, month, req) {
     .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY)
   
   if (bills.length > 0) {
-    // Legenda de cores das categorias
+    // Legenda de cores das categorias - lado esquerdo
     doc.moveDown(1.5)
     doc.fontSize(10)
       .fillColor('#1f2937')
-      .text('LEGENDA DE CATEGORIAS:', { underline: true })
+      .text('LEGENDA DE CATEGORIAS:', 30, doc.y, { underline: true })
     
     doc.moveDown(0.5)
     const legendY = doc.y
-    const legendItems = []
     const uniqueCategories = [...new Set(bills.map(b => b.category).filter(Boolean))]
     
     let legendX = 30
     let legendRow = 0
     uniqueCategories.forEach((catName, idx) => {
-      if (idx > 0 && idx % 3 === 0) {
+      if (idx > 0 && idx % 4 === 0) {
         legendRow++
         legendX = 30
       }
       const color = categoryColors[catName] || '#9ca3af'
-      const yPos = legendY + (legendRow * 20)
+      const yPos = legendY + (legendRow * 18)
       
       // Quadrado colorido
       doc.rect(legendX, yPos, 10, 10)
@@ -1481,7 +1480,7 @@ async function generatePDFReport(bills, year, month, req) {
         .fillColor('#374151')
         .text(catName || 'Sem categoria', legendX + 15, yPos + 1)
       
-      legendX += 150
+      legendX += 120
     })
     
     doc.moveDown(2)
@@ -1491,16 +1490,16 @@ async function generatePDFReport(bills, year, month, req) {
     
     doc.moveDown(0.8)
     
-    // Cabeçalho da tabela com melhor espaçamento
+    // Cabeçalho da tabela com melhor espaçamento - colunas ajustadas para evitar sobreposição
     const tableTop = doc.y
     const col1 = 30     // Data
-    const col2 = 85     // Descrição
-    const col3 = 180    // Categoria
-    const col4 = 250    // Status
-    const col5 = 300    // Valor
-    const col6 = 350    // Boleto
-    const col7 = 390    // Comprovante
-    const col8 = 450    // PIX
+    const col2 = 100    // Descrição (aumentada)
+    const col3 = 280    // Categoria (movida para dar mais espaço à descrição)
+    const col4 = 360    // Status
+    const col5 = 410    // Valor
+    const col6 = 470    // Boleto
+    const col7 = 510    // Comprovante
+    const col8 = 580    // PIX
     
     doc.fontSize(9)
       .fillColor('#6b7280')
@@ -1528,7 +1527,7 @@ async function generatePDFReport(bills, year, month, req) {
       // Cor de fundo da linha baseada na categoria
       const categoryColor = categoryColors[bill.category] || '#f3f4f6'
       const rowHeight = 18
-      const rowWidth = col8 + 40 - col1
+      const rowWidth = col8 + 60 - col1
       
       // Desenhar retângulo colorido de fundo
       doc.rect(col1, currentY - 2, rowWidth, rowHeight)
@@ -1539,8 +1538,8 @@ async function generatePDFReport(bills, year, month, req) {
       doc.fontSize(9)
         .fillColor('#374151')
         .text(dueDate, col1, currentY)
-        .text(bill.name, col2, currentY) // Nome completo sem truncamento
-        .text(bill.category || 'Sem categoria', col3, currentY)
+        .text(bill.name, col2, currentY, { width: col3 - col2 - 5 }) // Nome completo com largura limitada para evitar sobreposição
+        .text(bill.category || 'Sem categoria', col3, currentY, { width: col4 - col3 - 5 })
         .fillColor(statusColor)
         .text(status, col4, currentY)
         .fillColor('#374151')
