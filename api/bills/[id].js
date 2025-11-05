@@ -388,6 +388,8 @@ export default async function handler(req, res) {
           _id: bill._id.toString()
         };
         return res.status(200).json(formattedBill);
+      } else {
+        return res.status(405).json({ error: `Método não permitido. Esperado: PATCH, DELETE ou GET, Recebido: ${req.method}` });
       }
     } else if (action === 'status') {
       if (req.method === 'PATCH') {
