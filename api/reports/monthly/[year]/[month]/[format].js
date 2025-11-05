@@ -36,10 +36,16 @@ function authenticateToken(req) {
 function generatePDFReportBuffer(bills, year, month) {
   return new Promise((resolve, reject) => {
     try {
+      const headerHeight = 120;
+      const tableHeaderHeight = 45;
+      const rowHeight = 18;
+      const footerHeight = 50;
+      const totalContentHeight = headerHeight + tableHeaderHeight + (bills.length * rowHeight) + footerHeight;
+      
       const doc = new PDFDocument({ 
         margin: 30,
         size: 'A4',
-        bufferPages: true, // IMPORTANTE: habilita buffer de páginas
+        bufferPages: true,
         autoFirstPage: true,
         info: {
           Title: `Relatório Mensal - ${year}/${month}`,
@@ -51,7 +57,6 @@ function generatePDFReportBuffer(bills, year, month) {
       
       const chunks = [];
       
-      // Simplificar a coleta de chunks
       doc.on('data', (chunk) => {
         chunks.push(chunk);
       });
@@ -83,7 +88,6 @@ function generatePDFReportBuffer(bills, year, month) {
         reject(new Error(`Erro no PDFKit: ${err.message}`));
       });
     
-      // CABEÇALHO
       doc.fontSize(20)
         .fillColor('#1e40af')
         .text('Relatório Mensal de Contas', { align: 'center' });
@@ -95,11 +99,9 @@ function generatePDFReportBuffer(bills, year, month) {
       
       doc.moveDown(1.2);
       
-      // RESUMO FINANCEIRO
       const total = bills.reduce((acc, b) => acc + Number(b.amount || 0), 0);
       const paid = bills.filter(b => b.status === 'paid').reduce((acc, b) => acc + Number(b.amount || 0), 0);
       const pending = total - paid;
-      
       doc.fontSize(11)
         .fillColor('#1f2937')
         .text('RESUMO FINANCEIRO', { underline: true });
@@ -113,7 +115,7 @@ function generatePDFReportBuffer(bills, year, month) {
         .text(`Contas Pagas: R$ ${paid.toFixed(2)}`, 250, resumoY)
         .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY);
       
-      // TABELA DE CONTAS
+      if (bills.length > 0) {
       if (bills.length > 0) {
         doc.moveDown(2)
           .fontSize(13)
@@ -151,7 +153,7 @@ function generatePDFReportBuffer(bills, year, month) {
         let currentY = tableTop + 20;
         
         // Linhas da tabela
-        bills.forEach((bill, index) => {
+        bills.forEach((bill) => {
           // Verificar se precisa de nova página
           if (currentY > 700) {
             doc.addPage();
@@ -185,15 +187,13 @@ function generatePDFReportBuffer(bills, year, month) {
         });
       }
       
-      // RODAPÉ
       doc.moveDown(2);
       const footerY = doc.y;
       doc.fontSize(8)
         .fillColor('#9ca3af')
         .text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 30, footerY)
-        .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' });
+        .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' }, footerY);
       
-      // IMPORTANTE: Finalizar o documento
       doc.end();
       
     } catch (error) {
@@ -273,14 +273,14 @@ async function generateExcelReportBuffer(bills, year, month) {
   });
   
   worksheet.columns = [
-    { width: 12 },
-    { width: 25 },
-    { width: 15 },
-    { width: 12 },
-    { width: 12 },
-    { width: 10 },
-    { width: 12 },
-    { width: 10 }
+    { width: 12 },  // A - Data
+    { width: 25 },  // B - Descrição
+    { width: 15 },  // C - Categoria
+    { width: 12 },  // D - Status
+    { width: 12 },  // E - Valor
+    { width: 10 },  // F - Boleto
+    { width: 12 },  // G - Comprovante
+    { width: 10 }   // H - PIX
   ];
   
   const buffer = await workbook.xlsx.writeBuffer();
@@ -400,7 +400,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Ano e mês são obrigatórios e devem ser números válidos' });
     }
 
-    const { db } = await connectToDatabase();
+    const { client, db } = await connectToDatabase();
     
     const query = {
       user_id: new ObjectId(user.id)
@@ -451,7 +451,7 @@ export default async function handler(req, res) {
       case 'csv':
         buffer = await generateCSVReportBuffer(bills, y, m);
         fileName = `relatorio-${y}-${String(m).padStart(2, '0')}.csv`;
-        contentType = 'text/csv; charset=utf-8';
+        contentType = 'text/csv';
         break;
       case 'pdf':
       default:
