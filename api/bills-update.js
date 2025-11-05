@@ -41,8 +41,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== 'PATCH') {
-    return res.status(405).json({ error: `Método não permitido. Esperado: PATCH, Recebido: ${req.method}` });
+  if (req.method !== 'PATCH' && req.method !== 'DELETE') {
+    return res.status(405).json({ error: `Método não permitido. Esperado: PATCH ou DELETE, Recebido: ${req.method}` });
   }
 
   try {
@@ -85,6 +85,33 @@ export default async function handler(req, res) {
 
     if (!bill) {
       return res.status(404).json({ error: 'Conta não encontrada' });
+    }
+
+    if (req.method === 'DELETE') {
+      if (bill.boleto_file) {
+        const boletoPath = path.join('/tmp', 'uploads', 'boletos', bill.boleto_file);
+        if (fs.existsSync(boletoPath)) {
+          fs.unlinkSync(boletoPath);
+        }
+      }
+
+      if (bill.comprovante_file) {
+        const comprovantePath = path.join('/tmp', 'uploads', 'comprovantes', bill.comprovante_file);
+        if (fs.existsSync(comprovantePath)) {
+          fs.unlinkSync(comprovantePath);
+        }
+      }
+
+      const result = await db.collection('bills').deleteOne({ 
+        _id: new ObjectId(id), 
+        user_id: new ObjectId(user.id) 
+      });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ error: 'Conta não encontrada' });
+      }
+
+      return res.status(200).json({ success: true });
     }
 
     const updateData = {};
