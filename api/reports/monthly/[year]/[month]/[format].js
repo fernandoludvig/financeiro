@@ -316,12 +316,28 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Token de acesso necessário' });
     }
 
-    const { year, month, format } = req.query;
+    let year = req.query.year;
+    let month = req.query.month;
+    let formatType = req.query.format || 'pdf';
+    
+    if (!year || !month) {
+      const url = req.url || '';
+      const urlParts = url.split('/').filter(Boolean);
+      const reportsIndex = urlParts.indexOf('reports');
+      
+      if (reportsIndex !== -1) {
+        if (urlParts.length > reportsIndex + 1 && urlParts[reportsIndex + 1] === 'monthly') {
+          if (urlParts.length > reportsIndex + 2) year = urlParts[reportsIndex + 2];
+          if (urlParts.length > reportsIndex + 3) month = urlParts[reportsIndex + 3];
+          if (urlParts.length > reportsIndex + 4) formatType = urlParts[reportsIndex + 4];
+        }
+      }
+    }
+    
     const { category, status, startDate, endDate } = req.query;
     
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);
-    const formatType = format || 'pdf';
     
     if (!y || !m) {
       return res.status(400).json({ error: 'Ano e mês são obrigatórios' });
