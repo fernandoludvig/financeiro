@@ -487,15 +487,22 @@ export default function App() {
 
   function openEditModal(bill) {
     // Converter data para formato local (YYYY-MM-DD) sem problemas de timezone
-    const dueDate = new Date(bill.due_date)
-    const localDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
-    const formattedDate = localDate.toISOString().split('T')[0]
+    let formattedDate = ''
+    if (bill.due_date) {
+      const dueDate = new Date(bill.due_date)
+      if (!isNaN(dueDate.getTime())) {
+        const localDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        formattedDate = localDate.toISOString().split('T')[0]
+      }
+    }
+    
+    console.log('📝 Abrindo modal de edição:', { bill, formattedDate })
     
     setEditingBill({
       id: bill.id,
-      name: bill.name,
+      name: bill.name || '',
       category: bill.category || '',
-      amount: bill.amount,
+      amount: bill.amount || '',
       due_date: formattedDate
     })
     setShowEditModal(true)
@@ -2510,7 +2517,7 @@ export default function App() {
                   <Label>Vencimento</Label>
                   <Input 
                     type="date" 
-                    value={editingBill.due_date} 
+                    value={editingBill.due_date || ''} 
                     onChange={(e)=>setEditingBill(b=>({...b,due_date:e.target.value}))} 
                     required 
                   />
