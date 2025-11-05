@@ -333,34 +333,39 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Token de acesso necessário' });
     }
 
+    const url = req.url || '';
+    const urlParts = url.split('/').filter(Boolean);
+    const billsIndex = urlParts.indexOf('bills');
+    
     let id = req.query.id;
-    if (!id && req.url) {
-      const urlParts = req.url.split('/').filter(Boolean);
-      const idIndex = urlParts.indexOf('bills');
-      if (idIndex !== -1 && urlParts[idIndex + 1]) {
-        id = urlParts[idIndex + 1];
+    let action = null;
+    
+    if (billsIndex !== -1) {
+      if (urlParts.length > billsIndex + 1) {
+        id = urlParts[billsIndex + 1] || req.query.id;
       }
+      if (urlParts.length > billsIndex + 2) {
+        action = urlParts[billsIndex + 2];
+      }
+    }
+
+    if (!id) {
+      id = req.query.id;
     }
 
     if (!id) {
       return res.status(400).json({ error: 'ID não fornecido' });
     }
 
-    const url = req.url || '';
-    const urlParts = url.split('/').filter(Boolean);
-    const billsIndex = urlParts.indexOf('bills');
-    let action = null;
-    
-    if (billsIndex !== -1 && urlParts.length > billsIndex + 1) {
-      const potentialId = urlParts[billsIndex + 1];
-      if (potentialId === id && urlParts.length > billsIndex + 2) {
-        action = urlParts[billsIndex + 2];
-      } else if (potentialId === id && urlParts.length === billsIndex + 2) {
-        action = null;
-      }
-    }
-
-    console.log('🔍 [DEBUG] Roteamento:', { url, id, action, method: req.method, urlParts });
+    console.log('🔍 [DEBUG] Roteamento:', { 
+      url, 
+      id, 
+      action, 
+      method: req.method, 
+      urlParts,
+      query: req.query,
+      fullUrl: req.url
+    });
 
     if (!action || action === id) {
       if (req.method === 'PATCH') {
