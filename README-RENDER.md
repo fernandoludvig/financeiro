@@ -22,9 +22,9 @@
    Adicione as seguintes variáveis no Render:
    - `NODE_ENV` = `production`
    - `PORT` = `10000` (ou deixe o Render definir automaticamente)
-   - `MONGODB_URI` = Sua string de conexão do MongoDB
-   - `JWT_SECRET` = Um secret aleatório para JWT
-   - `CORS_ORIGINS` = URL do seu app no Render (ex: `https://seu-app.onrender.com`)
+   - `MONGODB_URI` = `mongodb+srv://fernandoludvig:082004Fe@cluster0.k8gunhp.mongodb.net/`
+   - `JWT_SECRET` = [o secret que você criou]
+   - `CORS_ORIGINS` = `https://financeiro-ncuv.onrender.com`
    - `EMAIL_USER` = Email para notificações (opcional)
    - `EMAIL_PASS` = Senha do email (opcional)
 
