@@ -486,12 +486,17 @@ export default function App() {
   }
 
   function openEditModal(bill) {
+    // Converter data para formato local (YYYY-MM-DD) sem problemas de timezone
+    const dueDate = new Date(bill.due_date)
+    const localDate = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+    const formattedDate = localDate.toISOString().split('T')[0]
+    
     setEditingBill({
       id: bill.id,
       name: bill.name,
       category: bill.category || '',
       amount: bill.amount,
-      due_date: new Date(bill.due_date).toISOString().split('T')[0]
+      due_date: formattedDate
     })
     setShowEditModal(true)
   }
@@ -597,15 +602,18 @@ export default function App() {
     if (useTodayDate) {
       const today = new Date()
       today.setHours(23, 59, 59, 999)
-      console.log('📅 Usando data de hoje:', today.toISOString())
-      markAsPaid(paymentBillId, today.toISOString())
+      // Usar meia-noite local ao invés de UTC para evitar diferença de um dia
+      const localDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+      console.log('📅 Usando data de hoje:', localDate.toISOString())
+      markAsPaid(paymentBillId, localDate.toISOString())
     } else {
       if (!paymentDate) {
         setError('Por favor, selecione uma data de pagamento')
         return
       }
-      const selectedDate = new Date(paymentDate)
-      selectedDate.setHours(23, 59, 59, 999)
+      // Converter data do input (YYYY-MM-DD) para Date local (meia-noite local)
+      const dateParts = paymentDate.split('-')
+      const selectedDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 23, 59, 59, 999)
       console.log('📅 Usando data selecionada:', selectedDate.toISOString())
       markAsPaid(paymentBillId, selectedDate.toISOString())
     }

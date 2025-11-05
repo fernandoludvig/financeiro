@@ -659,8 +659,15 @@ app.patch(
     const updateData = { status }
     if (status === 'paid') {
       if (paid_at) {
-        // Se paid_at é uma string ISO, converter para Date
-        const paidAtDate = typeof paid_at === 'string' ? new Date(paid_at) : paid_at
+        // Se paid_at é uma string ISO, converter para Date local (evitar problemas de timezone)
+        let paidAtDate
+        if (typeof paid_at === 'string') {
+          // Se é ISO string, converter preservando o dia/mês/ano
+          const date = new Date(paid_at)
+          paidAtDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
+        } else {
+          paidAtDate = paid_at
+        }
         updateData.paid_at = paidAtDate
         console.log('✅ paid_at fornecido, convertendo para Date:', updateData.paid_at, 'ISO:', paidAtDate.toISOString())
       } else {
