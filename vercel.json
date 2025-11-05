@@ -6,6 +6,18 @@
   "framework": "create-react-app",
   "rewrites": [
     {
+      "source": "/api/bills/:id/status",
+      "destination": "/api/bills-status?id=:id"
+    },
+    {
+      "source": "/api/bills/:id/comprovante",
+      "destination": "/api/bills-comprovante?id=:id"
+    },
+    {
+      "source": "/api/bills/:id/boleto",
+      "destination": "/api/bills-boleto?id=:id"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
