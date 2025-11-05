@@ -35,126 +35,152 @@ function authenticateToken(req) {
 
 function generatePDFReportBuffer(bills, year, month) {
   return new Promise((resolve, reject) => {
-    const headerHeight = 120;
-    const tableHeaderHeight = 45;
-    const rowHeight = 18;
-    const footerHeight = 50;
-    const totalContentHeight = headerHeight + tableHeaderHeight + (bills.length * rowHeight) + footerHeight;
+    try {
+      const headerHeight = 120;
+      const tableHeaderHeight = 45;
+      const rowHeight = 18;
+      const footerHeight = 50;
+      const totalContentHeight = headerHeight + tableHeaderHeight + (bills.length * rowHeight) + footerHeight;
+      
+      const doc = new PDFDocument({ 
+        margin: 30,
+        size: [842, Math.max(595, totalContentHeight + 50)],
+        info: {
+          Title: `Relatório Mensal - ${year}/${month}`,
+          Author: 'Sistema Financeiro',
+          Subject: 'Relatório de Contas'
+        }
+      });
+      
+      const chunks = [];
+      let hasError = false;
+      
+      doc.on('data', chunk => {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+        } else {
+          chunks.push(Buffer.from(chunk));
+        }
+      });
+      
+      doc.on('end', () => {
+        if (!hasError) {
+          const buffer = Buffer.concat(chunks);
+          if (buffer.length === 0) {
+            reject(new Error('PDF gerado está vazio'));
+          } else {
+            resolve(buffer);
+          }
+        }
+      });
+      
+      doc.on('error', (err) => {
+        hasError = true;
+        reject(err);
+      });
     
-    const doc = new PDFDocument({ 
-      margin: 30,
-      size: [842, Math.max(595, totalContentHeight + 50)],
-      info: {
-        Title: `Relatório Mensal - ${year}/${month}`,
-        Author: 'Sistema Financeiro',
-        Subject: 'Relatório de Contas'
-      }
-    });
-    
-    const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-    
-    doc.fontSize(20)
-      .fillColor('#1e40af')
-      .text('Relatório Mensal de Contas', { align: 'center' });
-    
-    doc.moveDown(0.8)
-      .fontSize(12)
-      .fillColor('#374151')
-      .text(`Período: ${String(month).padStart(2, '0')}/${year}`, { align: 'center' });
-    
-    doc.moveDown(1.2);
-    
-    const total = bills.reduce((acc, b) => acc + Number(b.amount), 0);
-    const paid = bills.filter(b => b.status === 'paid').reduce((acc, b) => acc + Number(b.amount), 0);
-    const pending = total - paid;
-    
-    doc.fontSize(11)
-      .fillColor('#1f2937')
-      .text('RESUMO FINANCEIRO', { underline: true });
-    
-    doc.moveDown(0.6);
-    
-    const resumoY = doc.y;
-    doc.fontSize(10)
-      .fillColor('#374151')
-      .text(`Total de Contas: R$ ${total.toFixed(2)}`, 30, resumoY)
-      .text(`Contas Pagas: R$ ${paid.toFixed(2)}`, 250, resumoY)
-      .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY);
-    
-    if (bills.length > 0) {
-      doc.moveDown(2)
-        .fontSize(13)
+      doc.fontSize(20)
+        .fillColor('#1e40af')
+        .text('Relatório Mensal de Contas', { align: 'center' });
+      
+      doc.moveDown(0.8)
+        .fontSize(12)
+        .fillColor('#374151')
+        .text(`Período: ${String(month).padStart(2, '0')}/${year}`, { align: 'center' });
+      
+      doc.moveDown(1.2);
+      
+      const total = bills.reduce((acc, b) => acc + Number(b.amount || 0), 0);
+      const paid = bills.filter(b => b.status === 'paid').reduce((acc, b) => acc + Number(b.amount || 0), 0);
+      const pending = total - paid;
+      
+      doc.fontSize(11)
         .fillColor('#1f2937')
-        .text('DETALHAMENTO DAS CONTAS', 0, doc.y, { align: 'center', underline: true });
+        .text('RESUMO FINANCEIRO', { underline: true });
       
-      doc.moveDown(0.8);
+      doc.moveDown(0.6);
       
-      const tableTop = doc.y;
-      const col1 = 30;
-      const col2 = 85;
-      const col3 = 180;
-      const col4 = 250;
-      const col5 = 300;
-      const col6 = 350;
-      const col7 = 390;
-      const col8 = 450;
+      const resumoY = doc.y;
+      doc.fontSize(10)
+        .fillColor('#374151')
+        .text(`Total de Contas: R$ ${total.toFixed(2)}`, 30, resumoY)
+        .text(`Contas Pagas: R$ ${paid.toFixed(2)}`, 250, resumoY)
+        .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY);
       
-      doc.fontSize(9)
-        .fillColor('#6b7280')
-        .text('Data', col1, tableTop)
-        .text('Descrição', col2, tableTop)
-        .text('Categoria', col3, tableTop)
-        .text('Status', col4, tableTop)
-        .text('Valor', col5, tableTop)
-        .text('Boleto', col6, tableTop)
-        .text('Comprovante', col7, tableTop)
-        .text('PIX', col8, tableTop);
-      
-      doc.moveTo(col1, tableTop + 12)
-        .lineTo(col8 + 40, tableTop + 12)
-        .stroke('#e5e7eb');
-      
-      let currentY = tableTop + 20;
-      
-      bills.forEach((bill) => {
-        const dueDate = new Date(bill.due_date).toLocaleDateString('pt-BR');
-        const status = bill.status === 'paid' ? 'Pago' : 'Pendente';
-        const statusColor = bill.status === 'paid' ? '#10b981' : '#f59e0b';
+      if (bills.length > 0) {
+        doc.moveDown(2)
+          .fontSize(13)
+          .fillColor('#1f2937')
+          .text('DETALHAMENTO DAS CONTAS', 0, doc.y, { align: 'center', underline: true });
+        
+        doc.moveDown(0.8);
+        
+        const tableTop = doc.y;
+        const col1 = 30;
+        const col2 = 85;
+        const col3 = 180;
+        const col4 = 250;
+        const col5 = 300;
+        const col6 = 350;
+        const col7 = 390;
+        const col8 = 450;
         
         doc.fontSize(9)
-          .fillColor('#374151')
-          .text(dueDate, col1, currentY)
-          .text(bill.name.substring(0, 15) + (bill.name.length > 15 ? '...' : ''), col2, currentY)
-          .text((bill.category || 'Sem cat.').substring(0, 12) + ((bill.category || 'Sem cat.').length > 12 ? '...' : ''), col3, currentY)
-          .fillColor(statusColor)
-          .text(status, col4, currentY)
-          .fillColor('#374151')
-          .text(`R$ ${Number(bill.amount).toFixed(2)}`, col5, currentY);
+          .fillColor('#6b7280')
+          .text('Data', col1, tableTop)
+          .text('Descrição', col2, tableTop)
+          .text('Categoria', col3, tableTop)
+          .text('Status', col4, tableTop)
+          .text('Valor', col5, tableTop)
+          .text('Boleto', col6, tableTop)
+          .text('Comprovante', col7, tableTop)
+          .text('PIX', col8, tableTop);
         
-        doc.fillColor(bill.boleto_file ? '#1e40af' : '#ef4444')
-          .text(bill.boleto_file ? 'Sim' : 'Não', col6, currentY);
+        doc.moveTo(col1, tableTop + 12)
+          .lineTo(col8 + 40, tableTop + 12)
+          .stroke('#e5e7eb');
         
-        doc.fillColor(bill.comprovante_file ? '#1e40af' : '#ef4444')
-          .text(bill.comprovante_file ? 'Sim' : 'Não', col7, currentY);
+        let currentY = tableTop + 20;
         
-        doc.fillColor(bill.pix_info ? '#10b981' : '#ef4444')
-          .text(bill.pix_info ? 'Sim' : 'Não', col8, currentY);
-        
-        currentY += 18;
-      });
+        bills.forEach((bill) => {
+          const dueDate = new Date(bill.due_date).toLocaleDateString('pt-BR');
+          const status = bill.status === 'paid' ? 'Pago' : 'Pendente';
+          const statusColor = bill.status === 'paid' ? '#10b981' : '#f59e0b';
+          
+          doc.fontSize(9)
+            .fillColor('#374151')
+            .text(dueDate || '', col1, currentY)
+            .text((bill.name || '').substring(0, 15) + ((bill.name || '').length > 15 ? '...' : ''), col2, currentY)
+            .text(((bill.category || 'Sem cat.')).substring(0, 12) + ((bill.category || 'Sem cat.').length > 12 ? '...' : ''), col3, currentY)
+            .fillColor(statusColor)
+            .text(status, col4, currentY)
+            .fillColor('#374151')
+            .text(`R$ ${Number(bill.amount || 0).toFixed(2)}`, col5, currentY);
+          
+          doc.fillColor(bill.boleto_file ? '#1e40af' : '#ef4444')
+            .text(bill.boleto_file ? 'Sim' : 'Não', col6, currentY);
+          
+          doc.fillColor(bill.comprovante_file ? '#1e40af' : '#ef4444')
+            .text(bill.comprovante_file ? 'Sim' : 'Não', col7, currentY);
+          
+          doc.fillColor(bill.pix_info ? '#10b981' : '#ef4444')
+            .text(bill.pix_info ? 'Sim' : 'Não', col8, currentY);
+          
+          currentY += 18;
+        });
+      }
+      
+      doc.moveDown(2);
+      const footerY = doc.y;
+      doc.fontSize(8)
+        .fillColor('#9ca3af')
+        .text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 30, footerY)
+        .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' }, footerY);
+      
+      doc.end();
+    } catch (error) {
+      reject(error);
     }
-    
-    doc.moveDown(2);
-    const footerY = doc.y;
-    doc.fontSize(8)
-      .fillColor('#9ca3af')
-      .text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 30, footerY)
-      .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' }, footerY);
-    
-    doc.end();
   });
 }
 
@@ -282,11 +308,24 @@ async function generateZipReportBuffer(bills, year, month) {
       const archive = archiver('zip', { zlib: { level: 9 } });
       const chunks = [];
       
-      archive.on('data', chunk => chunks.push(chunk));
-      archive.on('end', () => resolve(Buffer.concat(chunks)));
+      archive.on('data', chunk => {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+        } else {
+          chunks.push(Buffer.from(chunk));
+        }
+      });
+      archive.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+        if (buffer.length === 0) {
+          reject(new Error('ZIP gerado está vazio'));
+        } else {
+          resolve(buffer);
+        }
+      });
       archive.on('error', reject);
       
-      archive.append(pdfBuffer, { name: `relatorio-${year}-${String(month).padStart(2, '0')}.pdf` });
+      archive.append(Buffer.from(pdfBuffer), { name: `relatorio-${year}-${String(month).padStart(2, '0')}.pdf` });
       
       archive.finalize();
     } catch (error) {
@@ -402,11 +441,16 @@ export default async function handler(req, res) {
         break;
     }
     
+    if (!buffer || buffer.length === 0) {
+      return res.status(500).json({ error: 'Erro ao gerar relatório: buffer vazio' });
+    }
+    
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Cache-Control', 'no-cache');
     
-    res.send(buffer);
+    res.end(buffer);
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
     res.status(500).json({ error: 'Erro ao gerar relatório', details: error.message });
