@@ -36,15 +36,11 @@ function authenticateToken(req) {
 function generatePDFReportBuffer(bills, year, month) {
   return new Promise((resolve, reject) => {
     try {
-      const headerHeight = 120;
-      const tableHeaderHeight = 45;
-      const rowHeight = 18;
-      const footerHeight = 50;
-      const totalContentHeight = headerHeight + tableHeaderHeight + (bills.length * rowHeight) + footerHeight;
-      
       const doc = new PDFDocument({ 
         margin: 30,
         size: 'A4',
+        bufferPages: true, // IMPORTANTE: habilita buffer de páginas
+        autoFirstPage: true,
         info: {
           Title: `Relatório Mensal - ${year}/${month}`,
           Author: 'Sistema Financeiro',
@@ -54,61 +50,40 @@ function generatePDFReportBuffer(bills, year, month) {
       });
       
       const chunks = [];
-      let hasError = false;
-      let errorMessage = null;
       
-      doc.on('data', chunk => {
-        try {
-          if (Buffer.isBuffer(chunk)) {
-            chunks.push(chunk);
-          } else if (typeof chunk === 'string') {
-            chunks.push(Buffer.from(chunk, 'utf8'));
-          } else {
-            chunks.push(Buffer.from(chunk));
-          }
-        } catch (err) {
-          if (!hasError) {
-            hasError = true;
-            errorMessage = err.message;
-          }
-        }
+      // Simplificar a coleta de chunks
+      doc.on('data', (chunk) => {
+        chunks.push(chunk);
       });
       
       doc.on('end', () => {
-        if (!hasError) {
-          try {
-            if (chunks.length === 0) {
-              reject(new Error('Nenhum chunk foi coletado do PDF'));
-              return;
-            }
-            const buffer = Buffer.concat(chunks);
-            if (buffer.length === 0) {
-              reject(new Error('PDF gerado está vazio'));
-            } else if (buffer.length < 100) {
-              reject(new Error(`PDF muito pequeno (${buffer.length} bytes), provavelmente corrompido`));
-            } else {
-              const pdfHeader = buffer.slice(0, 4).toString();
-              if (pdfHeader !== '%PDF') {
-                reject(new Error('PDF inválido: header não encontrado'));
-              } else {
-                console.log(`PDF gerado com sucesso: ${buffer.length} bytes`);
-                resolve(buffer);
-              }
-            }
-          } catch (err) {
-            reject(new Error(`Erro ao concatenar chunks: ${err.message}`));
+        try {
+          const pdfBuffer = Buffer.concat(chunks);
+          
+          if (pdfBuffer.length === 0) {
+            reject(new Error('PDF gerado está vazio'));
+            return;
           }
-        } else {
-          reject(new Error(errorMessage || 'Erro desconhecido ao gerar PDF'));
+          
+          // Verificar se é um PDF válido
+          const header = pdfBuffer.slice(0, 4).toString();
+          if (!header.startsWith('%PDF')) {
+            reject(new Error('PDF inválido: cabeçalho incorreto'));
+            return;
+          }
+          
+          console.log(`✅ PDF gerado com sucesso: ${pdfBuffer.length} bytes`);
+          resolve(pdfBuffer);
+        } catch (err) {
+          reject(new Error(`Erro ao processar PDF: ${err.message}`));
         }
       });
       
       doc.on('error', (err) => {
-        hasError = true;
-        errorMessage = err.message;
-        reject(err);
+        reject(new Error(`Erro no PDFKit: ${err.message}`));
       });
     
+      // CABEÇALHO
       doc.fontSize(20)
         .fillColor('#1e40af')
         .text('Relatório Mensal de Contas', { align: 'center' });
@@ -120,6 +95,7 @@ function generatePDFReportBuffer(bills, year, month) {
       
       doc.moveDown(1.2);
       
+      // RESUMO FINANCEIRO
       const total = bills.reduce((acc, b) => acc + Number(b.amount || 0), 0);
       const paid = bills.filter(b => b.status === 'paid').reduce((acc, b) => acc + Number(b.amount || 0), 0);
       const pending = total - paid;
@@ -137,11 +113,12 @@ function generatePDFReportBuffer(bills, year, month) {
         .text(`Contas Pagas: R$ ${paid.toFixed(2)}`, 250, resumoY)
         .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY);
       
+      // TABELA DE CONTAS
       if (bills.length > 0) {
         doc.moveDown(2)
           .fontSize(13)
           .fillColor('#1f2937')
-          .text('DETALHAMENTO DAS CONTAS', 0, doc.y, { align: 'center', underline: true });
+          .text('DETALHAMENTO DAS CONTAS', { align: 'center', underline: true });
         
         doc.moveDown(0.8);
         
@@ -155,6 +132,7 @@ function generatePDFReportBuffer(bills, year, month) {
         const col7 = 390;
         const col8 = 450;
         
+        // Cabeçalho da tabela
         doc.fontSize(9)
           .fillColor('#6b7280')
           .text('Data', col1, tableTop)
@@ -163,7 +141,7 @@ function generatePDFReportBuffer(bills, year, month) {
           .text('Status', col4, tableTop)
           .text('Valor', col5, tableTop)
           .text('Boleto', col6, tableTop)
-          .text('Comprovante', col7, tableTop)
+          .text('Comprov.', col7, tableTop)
           .text('PIX', col8, tableTop);
         
         doc.moveTo(col1, tableTop + 12)
@@ -172,7 +150,14 @@ function generatePDFReportBuffer(bills, year, month) {
         
         let currentY = tableTop + 20;
         
-        bills.forEach((bill) => {
+        // Linhas da tabela
+        bills.forEach((bill, index) => {
+          // Verificar se precisa de nova página
+          if (currentY > 700) {
+            doc.addPage();
+            currentY = 50;
+          }
+          
           const dueDate = new Date(bill.due_date).toLocaleDateString('pt-BR');
           const status = bill.status === 'paid' ? 'Pago' : 'Pendente';
           const statusColor = bill.status === 'paid' ? '#10b981' : '#f59e0b';
@@ -200,14 +185,17 @@ function generatePDFReportBuffer(bills, year, month) {
         });
       }
       
+      // RODAPÉ
       doc.moveDown(2);
       const footerY = doc.y;
       doc.fontSize(8)
         .fillColor('#9ca3af')
         .text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 30, footerY)
-        .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' }, footerY);
+        .text('Sistema Financeiro - Relatórios Automáticos', { align: 'center' });
       
+      // IMPORTANTE: Finalizar o documento
       doc.end();
+      
     } catch (error) {
       reject(error);
     }
@@ -291,7 +279,8 @@ async function generateExcelReportBuffer(bills, year, month) {
     { width: 12 },
     { width: 12 },
     { width: 10 },
-    { width: 12 }
+    { width: 12 },
+    { width: 10 }
   ];
   
   const buffer = await workbook.xlsx.writeBuffer();
@@ -339,12 +328,9 @@ async function generateZipReportBuffer(bills, year, month) {
       const chunks = [];
       
       archive.on('data', chunk => {
-        if (Buffer.isBuffer(chunk)) {
-          chunks.push(chunk);
-        } else {
-          chunks.push(Buffer.from(chunk));
-        }
+        chunks.push(chunk);
       });
+      
       archive.on('end', () => {
         const buffer = Buffer.concat(chunks);
         if (buffer.length === 0) {
@@ -353,9 +339,10 @@ async function generateZipReportBuffer(bills, year, month) {
           resolve(buffer);
         }
       });
+      
       archive.on('error', reject);
       
-      archive.append(Buffer.from(pdfBuffer), { name: `relatorio-${year}-${String(month).padStart(2, '0')}.pdf` });
+      archive.append(pdfBuffer, { name: `relatorio-${year}-${String(month).padStart(2, '0')}.pdf` });
       
       archive.finalize();
     } catch (error) {
@@ -365,7 +352,8 @@ async function generateZipReportBuffer(bills, year, month) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
@@ -408,11 +396,11 @@ export default async function handler(req, res) {
     const y = parseInt(year, 10);
     const m = parseInt(month, 10);
     
-    if (!y || !m) {
-      return res.status(400).json({ error: 'Ano e mês são obrigatórios' });
+    if (!y || !m || isNaN(y) || isNaN(m)) {
+      return res.status(400).json({ error: 'Ano e mês são obrigatórios e devem ser números válidos' });
     }
 
-    const { client, db } = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     const query = {
       user_id: new ObjectId(user.id)
@@ -425,7 +413,7 @@ export default async function handler(req, res) {
       };
     } else {
       const start = new Date(y, m - 1, 1);
-      const end = new Date(y, m, 0);
+      const end = new Date(y, m, 0, 23, 59, 59, 999);
       query.due_date = {
         $gte: start,
         $lte: end
@@ -441,6 +429,8 @@ export default async function handler(req, res) {
     }
     
     const bills = await db.collection('bills').find(query).sort({ due_date: 1 }).toArray();
+    
+    console.log(`📊 Gerando relatório: ${bills.length} contas encontradas`);
     
     let buffer;
     let fileName;
@@ -461,7 +451,7 @@ export default async function handler(req, res) {
       case 'csv':
         buffer = await generateCSVReportBuffer(bills, y, m);
         fileName = `relatorio-${y}-${String(m).padStart(2, '0')}.csv`;
-        contentType = 'text/csv';
+        contentType = 'text/csv; charset=utf-8';
         break;
       case 'pdf':
       default:
@@ -472,25 +462,29 @@ export default async function handler(req, res) {
     }
     
     if (!buffer || buffer.length === 0) {
+      console.error('❌ Buffer vazio após geração');
       return res.status(500).json({ error: 'Erro ao gerar relatório: buffer vazio' });
     }
     
-    res.status(200);
+    console.log(`✅ Relatório gerado: ${fileName} (${buffer.length} bytes)`);
+    
+    // Configurar headers ANTES de enviar o conteúdo
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Content-Length', buffer.length);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    if (Buffer.isBuffer(buffer)) {
-      return res.send(buffer);
-    } else {
-      return res.send(Buffer.from(buffer));
-    }
+    // CORREÇÃO PRINCIPAL: usar res.end() ao invés de res.send()
+    res.status(200).end(buffer);
+    
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
-    res.status(500).json({ error: 'Erro ao gerar relatório', details: error.message });
+    return res.status(500).json({ 
+      error: 'Erro ao gerar relatório', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
-
