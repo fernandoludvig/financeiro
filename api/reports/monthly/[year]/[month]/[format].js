@@ -68,6 +68,7 @@ function generatePDFReportBuffer(bills, year, month) {
             return;
           }
           
+          // Concatenar todos os chunks em um único buffer
           const pdfBuffer = Buffer.concat(chunks);
           
           if (pdfBuffer.length === 0) {
@@ -78,7 +79,7 @@ function generatePDFReportBuffer(bills, year, month) {
           // Verificar se é um PDF válido
           const header = pdfBuffer.slice(0, 4).toString('ascii');
           if (header !== '%PDF') {
-            console.error('❌ Header PDF inválido:', header);
+            console.error('❌ Header PDF inválido:', header, 'Primeiros bytes:', pdfBuffer.slice(0, 20).toString('hex'));
             reject(new Error('PDF inválido: cabeçalho incorreto'));
             return;
           }
@@ -89,8 +90,11 @@ function generatePDFReportBuffer(bills, year, month) {
             return;
           }
           
-          console.log(`✅ PDF gerado com sucesso: ${pdfBuffer.length} bytes, header: ${header}`);
-          resolve(pdfBuffer);
+          // Criar uma cópia do buffer para garantir que não seja modificado
+          const finalBuffer = Buffer.from(pdfBuffer);
+          
+          console.log(`✅ PDF gerado com sucesso: ${finalBuffer.length} bytes, header: ${header}`);
+          resolve(finalBuffer);
         } catch (err) {
           console.error('❌ Erro ao processar PDF:', err);
           reject(new Error(`Erro ao processar PDF: ${err.message}`));
@@ -479,33 +483,35 @@ export default async function handler(req, res) {
     
     console.log(`✅ Relatório gerado: ${fileName} (${buffer.length} bytes)`);
     
-    // Verificar se é um Buffer válido
-    if (!Buffer.isBuffer(buffer)) {
-      buffer = Buffer.from(buffer);
+    // Garantir que seja um Buffer válido e criar cópia
+    let finalBuffer;
+    if (Buffer.isBuffer(buffer)) {
+      finalBuffer = Buffer.from(buffer);
+    } else {
+      finalBuffer = Buffer.from(buffer);
     }
     
     // Verificar o header do PDF antes de enviar
     if (contentType === 'application/pdf') {
-      const header = buffer.slice(0, 4).toString('ascii');
+      const header = finalBuffer.slice(0, 4).toString('ascii');
       if (header !== '%PDF') {
-        console.error('❌ PDF inválido antes de enviar:', header);
+        console.error('❌ PDF inválido antes de enviar:', header, 'Primeiros bytes:', finalBuffer.slice(0, 20).toString('hex'));
         return res.status(500).json({ error: 'PDF gerado está corrompido' });
       }
-      console.log(`✅ PDF válido confirmado: ${header}, ${buffer.length} bytes`);
+      console.log(`✅ PDF válido confirmado antes de enviar: ${header}, ${finalBuffer.length} bytes`);
     }
     
     // Configurar headers ANTES de enviar
     res.status(200);
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Content-Length', finalBuffer.length.toString());
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // Enviar o buffer usando write com encoding binary
-    res.write(buffer, 'binary');
-    res.end();
+    // Enviar o buffer - tentar método direto
+    return res.end(finalBuffer);
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
