@@ -651,8 +651,13 @@ app.patch(
     const { id } = req.params
     
     const updateData = { status }
-    if (status === 'paid' && paid_at) {
-      updateData.paid_at = new Date(paid_at)
+    if (status === 'paid') {
+      if (paid_at) {
+        updateData.paid_at = new Date(paid_at)
+      } else {
+        // Se não foi fornecido paid_at, usar data de hoje
+        updateData.paid_at = new Date()
+      }
     } else if (status === 'pending') {
       updateData.paid_at = null
     }
@@ -671,8 +676,15 @@ app.patch(
     const formattedBill = {
       ...bill.toObject(),
       id: bill._id.toString(),
-      user_id: bill.user_id.toString()
+      user_id: bill.user_id.toString(),
+      paid_at: bill.paid_at ? bill.paid_at.toISOString() : null
     }
+    
+    console.log('📤 Enviando conta atualizada:', {
+      id: formattedBill.id,
+      status: formattedBill.status,
+      paid_at: formattedBill.paid_at
+    })
     
     res.json(formattedBill)
   } catch (error) {

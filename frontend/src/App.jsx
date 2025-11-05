@@ -567,6 +567,8 @@ export default function App() {
         body.paid_at = paidAt
       }
       
+      console.log('📤 Enviando atualização de status:', body)
+      
       const res = await fetch(`${API_URL}/bills/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -574,8 +576,16 @@ export default function App() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao atualizar')
-      setBills(prev => prev.map(b => (b.id === id ? data : b)))
+      
+      console.log('📥 Resposta recebida:', data)
+      console.log('📅 paid_at recebido:', data.paid_at)
+      
+      // Atualizar a lista local e recarregar para garantir
+      setBills(prev => prev.map(b => (b.id === id ? { ...data, paid_at: data.paid_at } : b)))
       setShowPaymentDateModal(false)
+      
+      // Recarregar a lista para garantir que está sincronizada
+      await loadBills()
     } catch (err) {
       setError(err.message)
     }
