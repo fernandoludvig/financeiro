@@ -77,12 +77,23 @@ function generatePDFReportBuffer(bills, year, month) {
       doc.on('end', () => {
         if (!hasError) {
           try {
+            if (chunks.length === 0) {
+              reject(new Error('Nenhum chunk foi coletado do PDF'));
+              return;
+            }
             const buffer = Buffer.concat(chunks);
             if (buffer.length === 0) {
               reject(new Error('PDF gerado está vazio'));
+            } else if (buffer.length < 100) {
+              reject(new Error(`PDF muito pequeno (${buffer.length} bytes), provavelmente corrompido`));
             } else {
-              console.log(`PDF gerado com sucesso: ${buffer.length} bytes`);
-              resolve(buffer);
+              const pdfHeader = buffer.slice(0, 4).toString();
+              if (pdfHeader !== '%PDF') {
+                reject(new Error('PDF inválido: header não encontrado'));
+              } else {
+                console.log(`PDF gerado com sucesso: ${buffer.length} bytes`);
+                resolve(buffer);
+              }
             }
           } catch (err) {
             reject(new Error(`Erro ao concatenar chunks: ${err.message}`));
