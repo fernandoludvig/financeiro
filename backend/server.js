@@ -1389,7 +1389,13 @@ app.post('/api/notifications/test', authenticateToken, async (req, res) => {
   }
 })
 
-function generatePDFReport(bills, year, month, req) {
+async function generatePDFReport(bills, year, month, req) {
+  // Buscar categorias para obter cores
+  const categories = await Category.find({ user_id: req.user.id }).lean()
+  const categoryColors = {}
+  categories.forEach(cat => {
+    categoryColors[cat.name] = cat.color || '#3b82f6'
+  })
   // Calcular altura necessária baseada no número de contas
   const headerHeight = 120 // Cabeçalho + resumo com melhor espaçamento
   const tableHeaderHeight = 45 // Cabeçalho da tabela
@@ -1445,6 +1451,39 @@ function generatePDFReport(bills, year, month, req) {
     .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY)
   
   if (bills.length > 0) {
+    // Legenda de cores das categorias
+    doc.moveDown(1.5)
+    doc.fontSize(10)
+      .fillColor('#1f2937')
+      .text('LEGENDA DE CATEGORIAS:', { underline: true })
+    
+    doc.moveDown(0.5)
+    const legendY = doc.y
+    const legendItems = []
+    const uniqueCategories = [...new Set(bills.map(b => b.category).filter(Boolean))]
+    
+    let legendX = 30
+    let legendRow = 0
+    uniqueCategories.forEach((catName, idx) => {
+      if (idx > 0 && idx % 3 === 0) {
+        legendRow++
+        legendX = 30
+      }
+      const color = categoryColors[catName] || '#9ca3af'
+      const yPos = legendY + (legendRow * 20)
+      
+      // Quadrado colorido
+      doc.rect(legendX, yPos, 10, 10)
+        .fill(color)
+      
+      // Nome da categoria
+      doc.fontSize(8)
+        .fillColor('#374151')
+        .text(catName || 'Sem categoria', legendX + 15, yPos + 1)
+      
+      legendX += 150
+    })
+    
     doc.moveDown(2)
     doc.fontSize(13)
       .fillColor('#1f2937')
@@ -1486,11 +1525,22 @@ function generatePDFReport(bills, year, month, req) {
       const status = bill.status === 'paid' ? 'Pago' : 'Pendente'
       const statusColor = bill.status === 'paid' ? '#10b981' : '#f59e0b'
       
+      // Cor de fundo da linha baseada na categoria
+      const categoryColor = categoryColors[bill.category] || '#f3f4f6'
+      const rowHeight = 18
+      const rowWidth = col8 + 40 - col1
+      
+      // Desenhar retângulo colorido de fundo
+      doc.rect(col1, currentY - 2, rowWidth, rowHeight)
+        .fillOpacity(0.2)
+        .fill(categoryColor)
+        .fillOpacity(1)
+      
       doc.fontSize(9)
         .fillColor('#374151')
         .text(dueDate, col1, currentY)
-        .text(bill.name.substring(0, 15) + (bill.name.length > 15 ? '...' : ''), col2, currentY)
-        .text((bill.category || 'Sem cat.').substring(0, 12) + ((bill.category || 'Sem cat.').length > 12 ? '...' : ''), col3, currentY)
+        .text(bill.name, col2, currentY) // Nome completo sem truncamento
+        .text(bill.category || 'Sem categoria', col3, currentY)
         .fillColor(statusColor)
         .text(status, col4, currentY)
         .fillColor('#374151')
