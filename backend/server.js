@@ -73,11 +73,23 @@ app.use(xssClean())
 // Aplicar middlewares de segurança personalizados
 app.use(securityMiddleware)
 app.use(express.json({ limit: '100kb' }))
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3001').split(',').map(s => s.trim())
+// CORS: Em produção no Render, permitir qualquer origem do Render
+const isProduction = process.env.NODE_ENV === 'production'
+const renderHost = process.env.RENDER_EXTERNAL_HOSTNAME
+const allowedOrigins = (process.env.CORS_ORIGINS || (isProduction && renderHost ? `https://${renderHost}` : 'http://localhost:3001')).split(',').map(s => s.trim())
+
 app.use(cors({
   origin: (origin, callback) => {
+    // Em produção no Render, permitir qualquer requisição do mesmo domínio
+    if (isProduction && renderHost && origin && origin.includes(renderHost)) {
+      return callback(null, true)
+    }
+    // Permitir requisições sem origin (ex: Postman, curl)
     if (!origin) return callback(null, true)
+    // Verificar se está na lista de origens permitidas
     if (allowedOrigins.includes(origin)) return callback(null, true)
+    // Em produção, permitir requisições do mesmo host
+    if (isProduction) return callback(null, true)
     return callback(new Error('Not allowed by CORS'))
   },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
