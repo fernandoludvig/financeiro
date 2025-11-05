@@ -1947,7 +1947,7 @@ export default function App() {
                               </td>
                               <td className="p-4">
                                 <span className="font-semibold text-sm text-green-600">
-                                  R$ {Number(b.amount).toFixed(0)}
+                                  R$ {Number(b.amount).toFixed(2)}
                                 </span>
                               </td>
                               <td className="p-4">
