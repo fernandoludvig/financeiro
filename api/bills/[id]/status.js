@@ -51,8 +51,24 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Token de acesso necessário' });
     }
 
-    const { id } = req.query;
-    const { status } = req.body;
+    let id = req.query.id;
+    if (!id && req.url) {
+      const urlParts = req.url.split('/').filter(Boolean);
+      const idIndex = urlParts.indexOf('bills');
+      if (idIndex !== -1 && urlParts[idIndex + 1]) {
+        id = urlParts[idIndex + 1];
+      }
+    }
+    
+    let body = {};
+    if (req.body) {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = req.body;
+      }
+    }
+    const { status } = body;
 
     if (!['pending', 'paid'].includes(status)) {
       return res.status(400).json({ error: 'Status inválido' });

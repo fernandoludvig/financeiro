@@ -64,7 +64,14 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Token de acesso necessário' });
     }
 
-    const { id } = req.query;
+    let id = req.query.id;
+    if (!id && req.url) {
+      const urlParts = req.url.split('/').filter(Boolean);
+      const idIndex = urlParts.indexOf('bills');
+      if (idIndex !== -1 && urlParts[idIndex + 1]) {
+        id = urlParts[idIndex + 1];
+      }
+    }
 
     const form = formidable({
       maxFileSize: 10 * 1024 * 1024,
