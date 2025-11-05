@@ -494,18 +494,17 @@ export default async function handler(req, res) {
       console.log(`✅ PDF válido confirmado: ${header}, ${buffer.length} bytes`);
     }
     
-    // Configurar headers
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${fileName}"`,
-      'Content-Length': buffer.length,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
+    // Configurar headers ANTES de enviar
+    res.status(200);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
-    // Enviar o buffer usando write e end
-    res.write(buffer);
+    // Enviar o buffer usando write com encoding binary
+    res.write(buffer, 'binary');
     res.end();
     
   } catch (error) {
