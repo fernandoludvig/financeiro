@@ -595,7 +595,10 @@ export default function App() {
     if (!paymentBillId) return
     
     if (useTodayDate) {
-      markAsPaid(paymentBillId, new Date().toISOString())
+      const today = new Date()
+      today.setHours(23, 59, 59, 999)
+      console.log('📅 Usando data de hoje:', today.toISOString())
+      markAsPaid(paymentBillId, today.toISOString())
     } else {
       if (!paymentDate) {
         setError('Por favor, selecione uma data de pagamento')
@@ -603,6 +606,7 @@ export default function App() {
       }
       const selectedDate = new Date(paymentDate)
       selectedDate.setHours(23, 59, 59, 999)
+      console.log('📅 Usando data selecionada:', selectedDate.toISOString())
       markAsPaid(paymentBillId, selectedDate.toISOString())
     }
   }

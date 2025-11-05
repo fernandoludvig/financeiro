@@ -650,23 +650,36 @@ app.patch(
     const { status, paid_at } = req.body
     const { id } = req.params
     
+    console.log('📥 Recebido no backend:', { status, paid_at, id })
+    
     const updateData = { status }
     if (status === 'paid') {
       if (paid_at) {
         updateData.paid_at = new Date(paid_at)
+        console.log('✅ paid_at fornecido, convertendo para Date:', updateData.paid_at)
       } else {
         // Se não foi fornecido paid_at, usar data de hoje
         updateData.paid_at = new Date()
+        console.log('⚠️ paid_at não fornecido, usando data de hoje:', updateData.paid_at)
       }
     } else if (status === 'pending') {
       updateData.paid_at = null
     }
     
+    console.log('📤 updateData antes do findOneAndUpdate:', updateData)
+    
     const bill = await Bill.findOneAndUpdate(
       { _id: id, user_id: req.user.id },
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     )
+    
+    console.log('📥 Bill após update:', {
+      id: bill?._id,
+      status: bill?.status,
+      paid_at: bill?.paid_at,
+      paid_at_type: typeof bill?.paid_at
+    })
     
     if (!bill) {
       return res.status(404).json({ error: 'Conta não encontrada' })
