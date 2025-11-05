@@ -44,38 +44,57 @@ function generatePDFReportBuffer(bills, year, month) {
       
       const doc = new PDFDocument({ 
         margin: 30,
-        size: [842, Math.max(595, totalContentHeight + 50)],
+        size: 'A4',
         info: {
           Title: `Relatório Mensal - ${year}/${month}`,
           Author: 'Sistema Financeiro',
-          Subject: 'Relatório de Contas'
+          Subject: 'Relatório de Contas',
+          Creator: 'Sistema Financeiro'
         }
       });
       
       const chunks = [];
       let hasError = false;
+      let errorMessage = null;
       
       doc.on('data', chunk => {
-        if (Buffer.isBuffer(chunk)) {
-          chunks.push(chunk);
-        } else {
-          chunks.push(Buffer.from(chunk));
+        try {
+          if (Buffer.isBuffer(chunk)) {
+            chunks.push(chunk);
+          } else if (typeof chunk === 'string') {
+            chunks.push(Buffer.from(chunk, 'utf8'));
+          } else {
+            chunks.push(Buffer.from(chunk));
+          }
+        } catch (err) {
+          if (!hasError) {
+            hasError = true;
+            errorMessage = err.message;
+          }
         }
       });
       
       doc.on('end', () => {
         if (!hasError) {
-          const buffer = Buffer.concat(chunks);
-          if (buffer.length === 0) {
-            reject(new Error('PDF gerado está vazio'));
-          } else {
-            resolve(buffer);
+          try {
+            const buffer = Buffer.concat(chunks);
+            if (buffer.length === 0) {
+              reject(new Error('PDF gerado está vazio'));
+            } else {
+              console.log(`PDF gerado com sucesso: ${buffer.length} bytes`);
+              resolve(buffer);
+            }
+          } catch (err) {
+            reject(new Error(`Erro ao concatenar chunks: ${err.message}`));
           }
+        } else {
+          reject(new Error(errorMessage || 'Erro desconhecido ao gerar PDF'));
         }
       });
       
       doc.on('error', (err) => {
         hasError = true;
+        errorMessage = err.message;
         reject(err);
       });
     
@@ -445,12 +464,19 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Erro ao gerar relatório: buffer vazio' });
     }
     
+    res.status(200);
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Length', buffer.length.toString());
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     
-    res.end(buffer);
+    if (Buffer.isBuffer(buffer)) {
+      return res.send(buffer);
+    } else {
+      return res.send(Buffer.from(buffer));
+    }
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
     res.status(500).json({ error: 'Erro ao gerar relatório', details: error.message });
