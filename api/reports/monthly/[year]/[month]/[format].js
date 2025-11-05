@@ -362,14 +362,6 @@ async function generateZipReportBuffer(bills, year, month) {
   });
 }
 
-// Configuração para desabilitar bodyParser para dados binários
-export const config = {
-  api: {
-    responseLimit: false,
-    bodyParser: false,
-  },
-};
-
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -487,21 +479,34 @@ export default async function handler(req, res) {
     
     console.log(`✅ Relatório gerado: ${fileName} (${buffer.length} bytes)`);
     
-    // Garantir que o buffer seja um Buffer válido
-    const finalBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    // Verificar se é um Buffer válido
+    if (!Buffer.isBuffer(buffer)) {
+      buffer = Buffer.from(buffer);
+    }
     
-    // Configurar headers ANTES de enviar o conteúdo
-    res.status(200);
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', finalBuffer.length.toString());
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Verificar o header do PDF antes de enviar
+    if (contentType === 'application/pdf') {
+      const header = buffer.slice(0, 4).toString('ascii');
+      if (header !== '%PDF') {
+        console.error('❌ PDF inválido antes de enviar:', header);
+        return res.status(500).json({ error: 'PDF gerado está corrompido' });
+      }
+      console.log(`✅ PDF válido confirmado: ${header}, ${buffer.length} bytes`);
+    }
     
-    // Enviar o buffer diretamente
-    return res.send(finalBuffer);
+    // Configurar headers
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Content-Length': buffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    // Enviar o buffer usando write e end
+    res.write(buffer);
+    res.end();
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
