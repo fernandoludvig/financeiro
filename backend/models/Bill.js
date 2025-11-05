@@ -76,6 +76,7 @@ billSchema.pre('save', function(next) {
       this.paid_at = null
     }
   }
+  // Se paid_at foi explicitamente definido, não sobrescrever
   next()
 })
 

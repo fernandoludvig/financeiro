@@ -75,6 +75,10 @@ export default function App() {
   const [currentPagePaid, setCurrentPagePaid] = useState(1)
   const ITEMS_PER_PAGE_PENDING = 5
   const ITEMS_PER_PAGE_PAID = 15
+  const [showPaymentDateModal, setShowPaymentDateModal] = useState(false)
+  const [paymentBillId, setPaymentBillId] = useState(null)
+  const [paymentDate, setPaymentDate] = useState('')
+  const [useTodayDate, setUseTodayDate] = useState(true)
 
   useEffect(() => {
     // Inicializar proteções de segurança
@@ -548,19 +552,48 @@ export default function App() {
     }
   }
 
-  async function markAsPaid(id) {
+  function openPaymentDateModal(id) {
+    setPaymentBillId(id)
+    setUseTodayDate(true)
+    setPaymentDate('')
+    setShowPaymentDateModal(true)
+  }
+
+  async function markAsPaid(id, paidAt = null) {
     setError('')
     try {
+      const body = { status: 'paid' }
+      if (paidAt) {
+        body.paid_at = paidAt
+      }
+      
       const res = await fetch(`${API_URL}/bills/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: 'paid' })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao atualizar')
       setBills(prev => prev.map(b => (b.id === id ? data : b)))
+      setShowPaymentDateModal(false)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  function handleConfirmPaymentDate() {
+    if (!paymentBillId) return
+    
+    if (useTodayDate) {
+      markAsPaid(paymentBillId, new Date().toISOString())
+    } else {
+      if (!paymentDate) {
+        setError('Por favor, selecione uma data de pagamento')
+        return
+      }
+      const selectedDate = new Date(paymentDate)
+      selectedDate.setHours(23, 59, 59, 999)
+      markAsPaid(paymentBillId, selectedDate.toISOString())
     }
   }
 
@@ -1421,7 +1454,7 @@ export default function App() {
                       <div className="flex gap-2 mb-2">
                         <Button 
                           size="default" 
-                          onClick={()=>markAsPaid(b.id)} 
+                          onClick={()=>openPaymentDateModal(b.id)} 
                           className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0 h-10"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1617,7 +1650,7 @@ export default function App() {
                       <div className="flex gap-2 w-full">
                         <Button 
                           size="sm" 
-                          onClick={()=>markAsPaid(b.id)} 
+                          onClick={()=>openPaymentDateModal(b.id)} 
                           className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -1732,7 +1765,7 @@ export default function App() {
                       <div className="flex gap-2 mb-2">
                         <Button 
                           size="default" 
-                          onClick={()=>markAsPaid(b.id)} 
+                          onClick={()=>openPaymentDateModal(b.id)} 
                           className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md border-0 h-10"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -1913,6 +1946,7 @@ export default function App() {
                           <th className="text-left p-4 text-sm font-semibold text-green-800">Categoria</th>
                           <th className="text-left p-4 text-sm font-semibold text-green-800">Valor</th>
                           <th className="text-left p-4 text-sm font-semibold text-green-800">Vencimento</th>
+                          <th className="text-left p-4 text-sm font-semibold text-green-800">Data do Pagamento</th>
                           <th className="text-center p-4 text-sm font-semibold text-green-800">Anexos</th>
                           <th className="text-center p-4 text-sm font-semibold text-green-800">Ações</th>
                         </tr>
@@ -1953,6 +1987,11 @@ export default function App() {
                               <td className="p-4">
                                 <span className="text-sm text-gray-600">
                                   {formatDate(b.due_date).replace('/2025', '').replace('/2024', '')}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm text-gray-600">
+                                  {b.paid_at ? formatDate(b.paid_at).replace('/2025', '').replace('/2024', '') : '-'}
                                 </span>
                               </td>
                               <td className="p-4 text-center">
@@ -2544,6 +2583,100 @@ export default function App() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowCategoryModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Data de Pagamento */}
+      {showPaymentDateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-green-600" />
+                Data do Pagamento
+              </CardTitle>
+              <CardDescription>Escolha a data em que a conta foi paga</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Qual data deseja usar?</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="today"
+                        name="paymentDate"
+                        checked={useTodayDate}
+                        onChange={() => {
+                          setUseTodayDate(true)
+                          setPaymentDate('')
+                        }}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <Label htmlFor="today" className="cursor-pointer">
+                        Usar data de hoje ({formatDate(new Date())})
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="other"
+                        name="paymentDate"
+                        checked={!useTodayDate}
+                        onChange={() => setUseTodayDate(false)}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <Label htmlFor="other" className="cursor-pointer">
+                        Escolher outra data
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
+                {!useTodayDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-date">Data do Pagamento</Label>
+                    <Input
+                      id="payment-date"
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded p-3">
+                    <p className="text-red-800 text-sm">{error}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button 
+                onClick={handleConfirmPaymentDate}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                Confirmar Pagamento
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowPaymentDateModal(false)
+                  setPaymentBillId(null)
+                  setPaymentDate('')
+                  setUseTodayDate(true)
+                  setError('')
+                }}
                 className="flex-1"
               >
                 Cancelar

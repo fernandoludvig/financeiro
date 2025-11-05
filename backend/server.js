@@ -641,17 +641,25 @@ app.patch(
   authenticateToken,
   [
     param('id').isMongoId().withMessage('ID inválido'),
-    body('status').isIn(['pending', 'paid']).withMessage('Status inválido')
+    body('status').isIn(['pending', 'paid']).withMessage('Status inválido'),
+    body('paid_at').optional().isISO8601().withMessage('Data de pagamento inválida').toDate()
   ],
   handleValidationErrors,
   async (req, res) => {
   try {
-    const { status } = req.body
+    const { status, paid_at } = req.body
     const { id } = req.params
+    
+    const updateData = { status }
+    if (status === 'paid' && paid_at) {
+      updateData.paid_at = new Date(paid_at)
+    } else if (status === 'pending') {
+      updateData.paid_at = null
+    }
     
     const bill = await Bill.findOneAndUpdate(
       { _id: id, user_id: req.user.id },
-      { status },
+      updateData,
       { new: true }
     )
     
