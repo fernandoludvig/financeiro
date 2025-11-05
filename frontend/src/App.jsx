@@ -20,7 +20,21 @@ import {
   secureSession 
 } from './security.js'
 
-const API_URL = (process.env.REACT_APP_API_URL || '').trim() || `http://localhost:3001/api`
+const getApiUrl = () => {
+  const envUrl = (process.env.REACT_APP_API_URL || '').trim()
+  if (envUrl) return envUrl
+  
+  if (typeof window !== 'undefined') {
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    if (isProduction) {
+      return '/api'
+    }
+  }
+  
+  return 'http://localhost:3001/api'
+}
+
+const API_URL = getApiUrl()
 
 export default function App() {
   const [token, setToken] = useState(null)
