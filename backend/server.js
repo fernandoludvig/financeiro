@@ -642,7 +642,7 @@ app.patch(
   [
     param('id').isMongoId().withMessage('ID inválido'),
     body('status').isIn(['pending', 'paid']).withMessage('Status inválido'),
-    body('paid_at').optional().isISO8601().withMessage('Data de pagamento inválida').toDate()
+    body('paid_at').optional().isISO8601().withMessage('Data de pagamento inválida')
   ],
   handleValidationErrors,
   async (req, res) => {
