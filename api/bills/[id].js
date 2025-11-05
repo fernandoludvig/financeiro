@@ -351,14 +351,16 @@ export default async function handler(req, res) {
     const billsIndex = urlParts.indexOf('bills');
     let action = null;
     
-    if (billsIndex !== -1 && urlParts[billsIndex + 1]) {
+    if (billsIndex !== -1 && urlParts.length > billsIndex + 1) {
       const potentialId = urlParts[billsIndex + 1];
-      if (potentialId === id && urlParts[billsIndex + 2]) {
+      if (potentialId === id && urlParts.length > billsIndex + 2) {
         action = urlParts[billsIndex + 2];
-      } else if (potentialId === id) {
+      } else if (potentialId === id && urlParts.length === billsIndex + 2) {
         action = null;
       }
     }
+
+    console.log('🔍 [DEBUG] Roteamento:', { url, id, action, method: req.method, urlParts });
 
     if (!action || action === id) {
       if (req.method === 'PATCH') {
