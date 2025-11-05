@@ -647,11 +647,14 @@ app.patch(
   handleValidationErrors,
   async (req, res) => {
   try {
-    const { status, paid_at } = req.body
+    // Pegar diretamente do req.body para evitar problemas com validação
+    const status = req.body.status
+    const paid_at = req.body.paid_at
     const { id } = req.params
     
     console.log('📥 Recebido no backend:', { status, paid_at, id, paid_at_type: typeof paid_at })
     console.log('📥 req.body completo:', JSON.stringify(req.body, null, 2))
+    console.log('📥 req.body.paid_at:', req.body.paid_at, 'tipo:', typeof req.body.paid_at)
     
     const updateData = { status }
     if (status === 'paid') {
