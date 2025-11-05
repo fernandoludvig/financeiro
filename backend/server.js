@@ -670,10 +670,15 @@ app.patch(
     }
     
     console.log('📤 updateData antes do findOneAndUpdate:', updateData)
+    console.log('📤 updateData.paid_at:', updateData.paid_at, 'tipo:', typeof updateData.paid_at)
+    
+    // Usar $set explicitamente para garantir que paid_at seja salvo
+    const updateQuery = { $set: updateData }
+    console.log('📤 updateQuery:', JSON.stringify(updateQuery, null, 2))
     
     const bill = await Bill.findOneAndUpdate(
       { _id: id, user_id: req.user.id },
-      updateData,
+      updateQuery,
       { new: true, runValidators: true }
     )
     
@@ -689,17 +694,25 @@ app.patch(
     }
     
     // Formatar resposta para compatibilidade com frontend
+    const billObj = bill.toObject()
+    console.log('📥 billObj antes de formatar:', {
+      paid_at: billObj.paid_at,
+      paid_at_type: typeof billObj.paid_at,
+      paid_at_isDate: billObj.paid_at instanceof Date
+    })
+    
     const formattedBill = {
-      ...bill.toObject(),
+      ...billObj,
       id: bill._id.toString(),
       user_id: bill.user_id.toString(),
-      paid_at: bill.paid_at ? bill.paid_at.toISOString() : null
+      paid_at: bill.paid_at ? (bill.paid_at instanceof Date ? bill.paid_at.toISOString() : new Date(bill.paid_at).toISOString()) : null
     }
     
     console.log('📤 Enviando conta atualizada:', {
       id: formattedBill.id,
       status: formattedBill.status,
-      paid_at: formattedBill.paid_at
+      paid_at: formattedBill.paid_at,
+      paid_at_original: bill.paid_at
     })
     
     res.json(formattedBill)
