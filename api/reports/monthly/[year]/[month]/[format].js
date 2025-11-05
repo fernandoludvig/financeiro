@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import archiver from 'archiver';
+import fs from 'fs';
+import path from 'path';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -496,14 +498,40 @@ export default async function handler(req, res) {
       console.log(`✅ PDF válido confirmado antes de enviar: ${header}, ${finalBuffer.length} bytes`);
     }
     
+    // ÚLTIMA TENTATIVA: Salvar temporariamente em /tmp e enviar como arquivo
+    // Isso replica exatamente o comportamento do backend local que funciona
+    const tmpDir = '/tmp';
+    const tmpFilePath = path.join(tmpDir, fileName);
+    
+    // Garantir que o diretório /tmp existe
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    
+    // Salvar o buffer em arquivo temporário
+    fs.writeFileSync(tmpFilePath, finalBuffer);
+    
     // Configurar headers exatamente como no backend local
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', finalBuffer.length);
     
-    // No Vercel Serverless Functions, enviar o buffer diretamente sem encoding
-    // Isso replica o comportamento do res.download() do Express
-    res.status(200).end(finalBuffer);
+    // Enviar o arquivo usando fs.readFileSync (como no backend local)
+    const fileBuffer = fs.readFileSync(tmpFilePath);
+    res.setHeader('Content-Length', fileBuffer.length);
+    
+    // Enviar o arquivo
+    res.status(200).end(fileBuffer);
+    
+    // Limpar arquivo temporário após envio (opcional, mas recomendado)
+    setTimeout(() => {
+      try {
+        if (fs.existsSync(tmpFilePath)) {
+          fs.unlinkSync(tmpFilePath);
+        }
+      } catch (err) {
+        console.error('Erro ao limpar arquivo temporário:', err);
+      }
+    }, 1000);
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
