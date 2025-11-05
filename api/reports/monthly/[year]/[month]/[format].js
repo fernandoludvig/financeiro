@@ -496,21 +496,21 @@ export default async function handler(req, res) {
       console.log(`✅ PDF válido confirmado antes de enviar: ${header}, ${finalBuffer.length} bytes`);
     }
     
-    // IMPORTANTE: Configurar TODOS os headers de uma vez com writeHead ANTES de enviar qualquer conteúdo
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
-      'Content-Length': finalBuffer.length,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization'
-    });
+    // IMPORTANTE: No Vercel, precisamos garantir que o buffer seja enviado como binário
+    // Não usar writeHead pois pode causar problemas no Vercel
+    // Configurar headers individualmente ANTES de enviar
     
-    // Enviar o buffer binário diretamente
-    res.end(finalBuffer);
+    res.statusCode = 200;
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', finalBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Para Vercel Serverless Functions, usar send() com buffer
+    // Isso garante que o buffer seja enviado corretamente como binário
+    return res.send(finalBuffer);
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
