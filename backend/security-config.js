@@ -177,9 +177,11 @@ export const socialEngineeringProtection = {
   // Validar origem de requisições críticas
   validateRequestOrigin: (req) => {
     const allowedOrigins = [
+      'http://localhost:3000',
       'http://localhost:3001',
+      'https://localhost:3000',
       'https://localhost:3001',
-      process.env.FRONTEND_URL || 'http://localhost:3001'
+      process.env.FRONTEND_URL || 'http://localhost:3000'
     ]
     
     const origin = req.get('Origin') || req.get('Referer')

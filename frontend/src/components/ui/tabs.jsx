@@ -9,7 +9,7 @@ const TabsContext = React.createContext({
 export function Tabs({ value, onValueChange, children }) {
   return (
     <TabsContext.Provider value={{ value, onValueChange }}>
-      <div data-value={value} data-change={onValueChange}>{children}</div>
+      <div data-value={value}>{children}</div>
     </TabsContext.Provider>
   )
 }

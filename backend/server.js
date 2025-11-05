@@ -1260,8 +1260,8 @@ async function checkBillsDueToday() {
   }
 }
 
-// Cron para notificações regulares (a cada 2 horas)
-cron.schedule('0 */2 * * *', async () => {
+// Cron para notificações regulares (contas que vencem amanhã - apenas 1x por dia às 18:00)
+cron.schedule('0 18 * * *', async () => {
   try {
     const count = await checkUpcomingBills()
     console.log(`🔔 Notificações regulares processadas: ${count}`)
@@ -1270,8 +1270,8 @@ cron.schedule('0 */2 * * *', async () => {
   }
 })
 
-// Cron para lembretes urgentes de contas que vencem hoje (a cada 3 horas)
-cron.schedule('0 */3 * * *', async () => {
+// Cron para lembretes urgentes de contas que vencem hoje (06:00, 12:00, 15:00, 18:00)
+cron.schedule('0 6,12,15,18 * * *', async () => {
   try {
     const count = await checkBillsDueToday()
     console.log(`🔥 Lembretes urgentes enviados: ${count}`)
