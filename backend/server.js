@@ -1513,9 +1513,9 @@ async function generatePDFReport(bills, year, month, req) {
       .text('Comprovante', col7, tableTop)
       .text('PIX', col8, tableTop)
     
-    // Linha separadora
+    // Linha separadora - ajustada para a nova largura
     doc.moveTo(col1, tableTop + 12)
-      .lineTo(col8 + 40, tableTop + 12)
+      .lineTo(col8 + 60, tableTop + 12)
       .stroke('#e5e7eb')
     
     let currentY = tableTop + 20
