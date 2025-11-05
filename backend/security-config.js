@@ -195,6 +195,17 @@ export const socialEngineeringProtection = {
   
   // Validar origem de requisições críticas
   validateRequestOrigin: (req) => {
+    // Em produção no Render, permitir qualquer requisição do mesmo domínio
+    const isProduction = process.env.NODE_ENV === 'production'
+    const renderHost = process.env.RENDER_EXTERNAL_HOSTNAME
+    
+    if (isProduction && renderHost) {
+      // Em produção no Render, permitir requisições do mesmo domínio
+      const origin = req.get('Origin') || req.get('Referer')
+      if (!origin) return true // Permitir requisições sem origin (ex: Postman)
+      if (origin.includes(renderHost)) return true
+    }
+    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
@@ -203,7 +214,14 @@ export const socialEngineeringProtection = {
       process.env.FRONTEND_URL || 'http://localhost:3000'
     ]
     
+    // Adicionar origem do Render se estiver configurada
+    if (renderHost) {
+      allowedOrigins.push(`https://${renderHost}`)
+      allowedOrigins.push(`http://${renderHost}`)
+    }
+    
     const origin = req.get('Origin') || req.get('Referer')
+    if (!origin) return true // Permitir requisições sem origin em desenvolvimento
     return allowedOrigins.some(allowedOrigin => origin?.startsWith(allowedOrigin))
   },
   
