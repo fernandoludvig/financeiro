@@ -51,17 +51,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Token de acesso necessário' });
     }
 
-    const url = req.url || '';
-    const urlParts = url.split('/').filter(Boolean);
-    const billsIndex = urlParts.indexOf('bills');
-    let id = null;
+    let id = req.query.id;
     
-    if (billsIndex !== -1 && urlParts.length > billsIndex + 1) {
-      id = urlParts[billsIndex + 1];
-    }
-
-    if (!id) {
-      id = req.query.id;
+    if (!id && req.url) {
+      const url = req.url.split('?')[0];
+      const urlParts = url.split('/').filter(Boolean);
+      const billsIndex = urlParts.indexOf('bills');
+      
+      if (billsIndex !== -1 && urlParts.length > billsIndex + 1) {
+        id = urlParts[billsIndex + 1];
+      }
     }
 
     if (!id) {
