@@ -650,13 +650,16 @@ app.patch(
     const { status, paid_at } = req.body
     const { id } = req.params
     
-    console.log('📥 Recebido no backend:', { status, paid_at, id })
+    console.log('📥 Recebido no backend:', { status, paid_at, id, paid_at_type: typeof paid_at })
+    console.log('📥 req.body completo:', JSON.stringify(req.body, null, 2))
     
     const updateData = { status }
     if (status === 'paid') {
       if (paid_at) {
-        updateData.paid_at = new Date(paid_at)
-        console.log('✅ paid_at fornecido, convertendo para Date:', updateData.paid_at)
+        // Se paid_at é uma string ISO, converter para Date
+        const paidAtDate = typeof paid_at === 'string' ? new Date(paid_at) : paid_at
+        updateData.paid_at = paidAtDate
+        console.log('✅ paid_at fornecido, convertendo para Date:', updateData.paid_at, 'ISO:', paidAtDate.toISOString())
       } else {
         // Se não foi fornecido paid_at, usar data de hoje
         updateData.paid_at = new Date()
