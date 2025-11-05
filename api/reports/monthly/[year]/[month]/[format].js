@@ -116,7 +116,6 @@ function generatePDFReportBuffer(bills, year, month) {
         .text(`Contas Pendentes: R$ ${pending.toFixed(2)}`, 470, resumoY);
       
       if (bills.length > 0) {
-      if (bills.length > 0) {
         doc.moveDown(2)
           .fontSize(13)
           .fillColor('#1f2937')
@@ -134,7 +133,6 @@ function generatePDFReportBuffer(bills, year, month) {
         const col7 = 390;
         const col8 = 450;
         
-        // Cabeçalho da tabela
         doc.fontSize(9)
           .fillColor('#6b7280')
           .text('Data', col1, tableTop)
