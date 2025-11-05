@@ -63,6 +63,11 @@ function generatePDFReportBuffer(bills, year, month) {
       
       doc.on('end', () => {
         try {
+          if (chunks.length === 0) {
+            reject(new Error('Nenhum chunk foi coletado do PDF'));
+            return;
+          }
+          
           const pdfBuffer = Buffer.concat(chunks);
           
           if (pdfBuffer.length === 0) {
@@ -71,15 +76,23 @@ function generatePDFReportBuffer(bills, year, month) {
           }
           
           // Verificar se é um PDF válido
-          const header = pdfBuffer.slice(0, 4).toString();
-          if (!header.startsWith('%PDF')) {
+          const header = pdfBuffer.slice(0, 4).toString('ascii');
+          if (header !== '%PDF') {
+            console.error('❌ Header PDF inválido:', header);
             reject(new Error('PDF inválido: cabeçalho incorreto'));
             return;
           }
           
-          console.log(`✅ PDF gerado com sucesso: ${pdfBuffer.length} bytes`);
+          // Verificar se o PDF tem tamanho mínimo razoável
+          if (pdfBuffer.length < 100) {
+            reject(new Error(`PDF muito pequeno (${pdfBuffer.length} bytes), provavelmente corrompido`));
+            return;
+          }
+          
+          console.log(`✅ PDF gerado com sucesso: ${pdfBuffer.length} bytes, header: ${header}`);
           resolve(pdfBuffer);
         } catch (err) {
+          console.error('❌ Erro ao processar PDF:', err);
           reject(new Error(`Erro ao processar PDF: ${err.message}`));
         }
       });
@@ -466,16 +479,21 @@ export default async function handler(req, res) {
     
     console.log(`✅ Relatório gerado: ${fileName} (${buffer.length} bytes)`);
     
+    // Garantir que o buffer seja um Buffer válido
+    const finalBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    
     // Configurar headers ANTES de enviar o conteúdo
+    res.status(200);
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Content-Length', finalBuffer.length.toString());
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    // CORREÇÃO PRINCIPAL: usar res.end() ao invés de res.send()
-    res.status(200).end(buffer);
+    // Enviar o buffer diretamente
+    return res.send(finalBuffer);
     
   } catch (error) {
     console.error('❌ Erro ao gerar relatório:', error);
