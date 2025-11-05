@@ -18,6 +18,26 @@
       "destination": "/api/bills-boleto?id=:id"
     },
     {
+      "source": "/api/bills/:id",
+      "destination": "/api/bills-update?id=:id",
+      "has": [
+        {
+          "type": "method",
+          "value": "PATCH"
+        }
+      ]
+    },
+    {
+      "source": "/api/bills/:id",
+      "destination": "/api/bills-delete?id=:id",
+      "has": [
+        {
+          "type": "method",
+          "value": "DELETE"
+        }
+      ]
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
