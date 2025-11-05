@@ -1992,7 +1992,7 @@ export default function App() {
                               className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                             >
                               <td className="p-3">
-                                <div className="font-semibold text-sm text-gray-900 truncate max-w-[150px]" title={b.name}>
+                                <div className="font-semibold text-sm text-gray-900" title={b.name}>
                                   {b.name}
                                 </div>
                               </td>
