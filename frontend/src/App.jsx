@@ -1952,13 +1952,13 @@ export default function App() {
                       <table className="w-full min-w-full">
                       <thead className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
                         <tr>
-                          <th className="text-left p-4 text-sm font-semibold text-green-800">Conta</th>
-                          <th className="text-left p-4 text-sm font-semibold text-green-800">Categoria</th>
-                          <th className="text-left p-4 text-sm font-semibold text-green-800">Valor</th>
-                          <th className="text-left p-4 text-sm font-semibold text-green-800">Vencimento</th>
-                          <th className="text-left p-4 text-sm font-semibold text-green-800">Data do Pagamento</th>
-                          <th className="text-center p-4 text-sm font-semibold text-green-800">Anexos</th>
-                          <th className="text-center p-4 text-sm font-semibold text-green-800">Ações</th>
+                          <th className="text-left p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Conta</th>
+                          <th className="text-left p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Categoria</th>
+                          <th className="text-left p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Valor</th>
+                          <th className="text-left p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Vencimento</th>
+                          <th className="text-left p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Data do Pagamento</th>
+                          <th className="text-center p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Anexos</th>
+                          <th className="text-center p-3 text-sm font-semibold text-green-800 whitespace-nowrap">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
