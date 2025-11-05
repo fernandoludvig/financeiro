@@ -15,6 +15,10 @@
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
     "nodemailer": "^6.9.0",
-    "formidable": "^3.5.1"
+    "formidable": "^3.5.1",
+    "pdfkit": "^0.15.0",
+    "exceljs": "^4.4.0",
+    "csv-writer": "^1.6.0",
+    "archiver": "^7.0.1"
   }
 }
