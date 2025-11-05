@@ -90,14 +90,33 @@ export const clickjackingProtection = (req, res, next) => {
 // 8. PROTEÇÃO CONTRA DNS SPOOFING
 export const dnsProtection = (req, res, next) => {
   // Validar Host header contra lista de domínios permitidos
+  // Em produção (Render), permitir qualquer host do Render
+  const isProduction = process.env.NODE_ENV === 'production'
+  const renderHost = process.env.RENDER_EXTERNAL_HOSTNAME
+  
+  if (isProduction && renderHost) {
+    // Em produção no Render, permitir qualquer requisição
+    return next()
+  }
+  
+  // Em desenvolvimento, validar hosts permitidos
   const allowedHosts = [
     'localhost:3001',
+    'localhost:10000',
     '127.0.0.1:3001',
+    '127.0.0.1:10000',
     process.env.ALLOWED_HOST || 'localhost:3001'
   ]
   
+  // Se estiver no Render, adicionar o host do Render
+  if (renderHost) {
+    allowedHosts.push(renderHost)
+    allowedHosts.push(`${renderHost}:443`)
+    allowedHosts.push(`${renderHost}:80`)
+  }
+  
   const host = req.get('Host')
-  if (!allowedHosts.includes(host)) {
+  if (!allowedHosts.includes(host) && !isProduction) {
     return res.status(400).json({ 
       error: 'Host não autorizado',
       code: 'INVALID_HOST'
