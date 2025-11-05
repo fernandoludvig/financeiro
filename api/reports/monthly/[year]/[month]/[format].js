@@ -362,6 +362,14 @@ async function generateZipReportBuffer(bills, year, month) {
   });
 }
 
+// Configuração para desabilitar bodyParser para dados binários
+export const config = {
+  api: {
+    responseLimit: false,
+    bodyParser: false,
+  },
+};
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
