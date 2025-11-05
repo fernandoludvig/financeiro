@@ -4,7 +4,6 @@ import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import createCsvWriter from 'csv-writer';
 import archiver from 'archiver';
-import { Readable } from 'stream';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
