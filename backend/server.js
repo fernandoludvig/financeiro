@@ -1404,9 +1404,10 @@ async function generatePDFReport(bills, year, month, req) {
   const totalContentHeight = headerHeight + tableHeaderHeight + (bills.length * rowHeight) + footerHeight
   
   // Usar tamanho A4 landscape ou altura customizada para evitar múltiplas páginas
+  // Largura aumentada para acomodar mais colunas
   const doc = new PDFDocument({ 
     margin: 30,
-    size: [842, Math.max(595, totalContentHeight + 50)], // A4 landscape width, altura dinâmica
+    size: [900, Math.max(595, totalContentHeight + 50)], // Largura aumentada para 900 (era 842)
     info: {
       Title: `Relatório Mensal - ${year}/${month}`,
       Author: 'Sistema Financeiro',
