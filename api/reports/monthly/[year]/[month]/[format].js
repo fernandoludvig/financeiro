@@ -2,7 +2,6 @@ import { MongoClient, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
-import createCsvWriter from 'csv-writer';
 import archiver from 'archiver';
 
 const MONGODB_URI = process.env.MONGODB_URI;
