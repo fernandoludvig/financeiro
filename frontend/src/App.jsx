@@ -1697,8 +1697,8 @@ export default function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{height: '650px'}}>
-          <div className="flex flex-col" style={{height: '100%'}}>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6" style={{height: '650px'}}>
+          <div className="flex flex-col lg:col-span-2" style={{height: '100%'}}>
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <h3 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-2">
                 <Clock className="w-5 h-5 text-orange-600" />
@@ -1899,7 +1899,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <div className="flex flex-col" style={{height: '100%'}}>
+          <div className="flex flex-col lg:col-span-3" style={{height: '100%'}}>
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2 flex-shrink-0">
               <h3 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -1948,8 +1948,8 @@ export default function App() {
                 <Card className="border-0 shadow-modern-lg rounded-2xl bg-white overflow-hidden flex-1 flex flex-col">
                   <CardContent className="p-0 flex-1 flex flex-col">
                     <div className="overflow-hidden flex-1">
-                      <div className="h-full overflow-y-auto">
-                      <table className="w-full">
+                      <div className="h-full overflow-y-auto overflow-x-auto">
+                      <table className="w-full min-w-full">
                       <thead className="bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
                         <tr>
                           <th className="text-left p-4 text-sm font-semibold text-green-800">Conta</th>
@@ -1972,14 +1972,14 @@ export default function App() {
                               key={b.id} 
                               className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                             >
-                              <td className="p-4">
-                                <div className="font-semibold text-sm text-gray-900 truncate" title={b.name}>
+                              <td className="p-3">
+                                <div className="font-semibold text-sm text-gray-900 truncate max-w-[150px]" title={b.name}>
                                   {b.name}
                                 </div>
                               </td>
-                              <td className="p-4">
+                              <td className="p-3">
                                 <Badge 
-                                  className="text-xs px-3 py-1 rounded-full font-medium"
+                                  className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap"
                                   style={{ 
                                     backgroundColor: categoryColor,
                                     color: 'white',
@@ -1989,22 +1989,22 @@ export default function App() {
                                   {b.category || 'Sem categoria'}
                                 </Badge>
                               </td>
-                              <td className="p-4">
+                              <td className="p-3 whitespace-nowrap">
                                 <span className="font-semibold text-sm text-green-600">
                                   R$ {Number(b.amount).toFixed(2)}
                                 </span>
                               </td>
-                              <td className="p-4">
+                              <td className="p-3 whitespace-nowrap">
                                 <span className="text-sm text-gray-600">
                                   {formatDate(b.due_date).replace('/2025', '').replace('/2024', '')}
                                 </span>
                               </td>
-                              <td className="p-4">
+                              <td className="p-3 whitespace-nowrap">
                                 <span className="text-sm text-gray-600">
                                   {b.paid_at ? formatDate(b.paid_at).replace('/2025', '').replace('/2024', '') : '-'}
                                 </span>
                               </td>
-                              <td className="p-4 text-center">
+                              <td className="p-3 text-center">
                                 <div className="flex gap-2 justify-center">
                                   {b.boleto_file && (
                                     <Button 
