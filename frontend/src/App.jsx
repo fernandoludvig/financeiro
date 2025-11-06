@@ -592,11 +592,9 @@ export default function App() {
       console.log('📥 Resposta recebida:', data)
       console.log('📅 paid_at recebido:', data.paid_at)
       
-      // Atualizar a lista local e recarregar para garantir
-      setBills(prev => prev.map(b => (b.id === id ? { ...data, paid_at: data.paid_at } : b)))
       setShowPaymentDateModal(false)
       
-      // Recarregar a lista para garantir que está sincronizada
+      // Recarregar a lista para garantir que está sincronizada com o backend
       await loadBills()
     } catch (err) {
       setError(err.message)
