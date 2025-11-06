@@ -882,11 +882,13 @@ app.post(
 app.get(
   '/api/bills/:id/:type',
   authenticateToken,
-  [param('id').isMongoId().withMessage('ID inválido')],
-  handleValidationErrors,
   async (req, res) => {
   try {
     const { id, type } = req.params
+    
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID inválido', details: 'O ID fornecido não é um MongoDB ObjectId válido' })
+    }
     
     if (!['boleto', 'comprovante'].includes(type)) {
       return res.status(400).json({ error: 'Tipo de arquivo inválido' })
@@ -894,7 +896,7 @@ app.get(
     
     const bill = await Bill.findOne({ _id: id, user_id: req.user.id })
     if (!bill) {
-      return res.status(404).json({ error: 'Conta não encontrada' })
+      return res.status(404).json({ error: 'Conta não encontrada', details: `ID: ${id}, User: ${req.user.id}` })
     }
     
     const fileField = type === 'boleto' ? 'boleto_file' : 'comprovante_file'
@@ -902,19 +904,29 @@ app.get(
     const filePath = type === 'boleto' ? 'boletos' : 'comprovantes'
     
     if (!bill[fileField]) {
-      return res.status(404).json({ error: `${type} não encontrado` })
+      return res.status(404).json({ error: `${type} não encontrado na conta`, details: `Conta ID: ${id} não possui ${type} anexado` })
     }
     
     const fullPath = path.join(__dirname, 'uploads', filePath, bill[fileField])
     
     if (!fs.existsSync(fullPath)) {
-      return res.status(404).json({ error: 'Arquivo não encontrado no servidor' })
+      console.error(`Arquivo não encontrado: ${fullPath}`)
+      return res.status(404).json({ error: 'Arquivo não encontrado no servidor', details: `Caminho: ${fullPath}` })
     }
     
     const originalFilename = bill[filenameField] || `${type}.pdf`
     
-    res.download(fullPath, originalFilename)
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(originalFilename)}"`)
+    res.download(fullPath, originalFilename, (err) => {
+      if (err) {
+        console.error('Erro ao enviar arquivo:', err)
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erro ao baixar arquivo', details: err.message })
+        }
+      }
+    })
   } catch (error) {
+    console.error('Erro na rota de download:', error)
     res.status(500).json({ error: 'Erro ao baixar arquivo', details: error.message })
   }
 }
