@@ -552,7 +552,7 @@ app.post(
     body('name').trim().isLength({ min: 1, max: 120 }).withMessage('Nome obrigatório').escape(),
     body('category').optional({ nullable: true }).trim().isLength({ max: 120 }).escape(),
     body('amount').isFloat({ gt: 0 }).withMessage('Valor inválido'),
-    body('due_date').isDate().withMessage('Data inválida')
+    body('due_date').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Data inválida (formato esperado: YYYY-MM-DD)')
   ],
   handleValidationErrors,
   async (req, res) => {
@@ -561,8 +561,11 @@ app.post(
     console.log('📝 Dados recebidos para criar conta:', { name, category, amount, due_date })
     
     // Corrigir problema de timezone - criar data local preservando dia/mês/ano
+    if (!due_date || !due_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return res.status(400).json({ error: 'Data de vencimento inválida (formato esperado: YYYY-MM-DD)' })
+    }
     const dateParts = due_date.split('-')
-    const localDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
+    const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]))
     
     const bill = new Bill({
       user_id: new mongoose.Types.ObjectId(req.user.id),
@@ -599,7 +602,7 @@ app.patch(
     body('name').optional().trim().isLength({ min: 1, max: 120 }).withMessage('Nome inválido').escape(),
     body('category').optional({ nullable: true }).trim().isLength({ max: 120 }).escape(),
     body('amount').optional().isFloat({ gt: 0 }).withMessage('Valor inválido'),
-    body('due_date').optional().isDate().withMessage('Data inválida')
+    body('due_date').optional().matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Data inválida (formato esperado: YYYY-MM-DD)')
   ],
   handleValidationErrors,
   async (req, res) => {
@@ -616,8 +619,11 @@ app.patch(
     if (category !== undefined) bill.category = category || null
     if (amount !== undefined) bill.amount = amount
     if (due_date !== undefined) {
+      if (!due_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return res.status(400).json({ error: 'Data de vencimento inválida (formato esperado: YYYY-MM-DD)' })
+      }
       const dateParts = due_date.split('-')
-      const localDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
+      const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]))
       bill.due_date = localDate
     }
     
@@ -662,9 +668,16 @@ app.patch(
         // Se paid_at é uma string ISO, converter para Date local (evitar problemas de timezone)
         let paidAtDate
         if (typeof paid_at === 'string') {
-          // Se é ISO string, converter preservando o dia/mês/ano
-          const date = new Date(paid_at)
-          paidAtDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
+          // Extrair dia/mês/ano diretamente da string ISO para evitar problemas de timezone
+          const isoMatch = paid_at.match(/^(\d{4})-(\d{2})-(\d{2})/)
+          if (isoMatch) {
+            const [, year, month, day] = isoMatch
+            paidAtDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999)
+          } else {
+            // Fallback: tentar converter normalmente
+            const date = new Date(paid_at)
+            paidAtDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
+          }
         } else {
           paidAtDate = paid_at
         }
